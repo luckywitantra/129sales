@@ -1,0 +1,519 @@
+<script>
+    // ==========================================================
+    // DECOUPLED ARCHITECTURE: GITHUB PAGES <--> APPS SCRIPT API
+    // ==========================================================
+    
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw4Fgw79_oh3uV9u9pOh-4QW03pPNSzHv-pSCD11r5zNKhBRRcOddVNwRMJYICqBk9g/exec"; // Masukkan URL Web App GAS "Anyone" disini
+
+    async function callGAS(actionName, dataPayload = {}) {
+      try {
+        const response = await fetch(GAS_API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: actionName, data: dataPayload }),
+          headers: { "Content-Type": "text/plain;charset=utf-8" } // Mencegah preflight CORS error di GAS
+        });
+        const json = await response.json();
+        
+        if (!json.success) {
+          console.error("GAS Error:", json.msg);
+          throw new Error(json.msg);
+        }
+        return json.data;
+      } catch (error) {
+        alert("Koneksi Server Gagal: " + error.message);
+        throw error;
+      }
+    }
+
+    // STATE LOKAL
+    let activeUser = { id: '', role: '', nama: '' }; 
+    let latitude = 0, longitude = 0; 
+    let printData = { stats: {}, activeTasks: [], delegatedTasks: [], history: [], leaderboard: [], uniqueNasabah: [], trendData: [], trendLabels: [] };
+    let allUsers = []; 
+    let allProducts = []; 
+    let compressedImageBase64 = null; 
+    let myChart = null;
+
+    function requestLocationUpdate() {
+        if(navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                p => { latitude = p.coords.latitude; longitude = p.coords.longitude; },
+                e => { console.warn("GPS Alert:", e.message); },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    }
+
+    window.onload = () => {
+      requestLocationUpdate();
+      function getLocalIsoString(d) { 
+          let z = function(n) { return ('0'+n).slice(-2); }; 
+          return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate());
+      }
+      
+      let date = new Date();
+      let firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+      document.getElementById('filterStart').value = getLocalIsoString(firstDay); 
+      document.getElementById('filterEnd').value = getLocalIsoString(date);
+      
+      // MENGGUNAKAN FETCH API MENGGANTIKAN google.script.run
+      callGAS("getAppInitData").then(initData => {
+         initGateway(initData);
+      }).catch(err => {
+         document.getElementById('loginUserSelect').innerHTML = '<option value="">ERROR KONEKSI SERVER</option>';
+      });
+    };
+
+    function initGateway(initData) {
+       allUsers = initData.users; 
+       allProducts = initData.products;
+       
+       let sel = document.getElementById('loginUserSelect');
+       let opts = "";
+       allUsers.forEach(u => { 
+           opts += '<option value="' + u.id + '|' + u.akses + '|' + u.nama + '">' + u.nama + ' (' + u.akses + ')</option>'; 
+       });
+       sel.innerHTML = opts || '<option value="">TIDAK ADA DATA STAF</option>';
+
+       let optDelegasi = '<option value="SELF">👤 KERJAKAN SENDIRI</option>';
+       allUsers.forEach(u => { 
+           if(u.akses === "USER") optDelegasi += '<option value="' + u.id + '|' + u.nama + '">🤝 OPER KE: ' + u.nama + '</option>'; 
+       });
+       document.getElementById('inputAssignee').innerHTML = optDelegasi;
+       document.getElementById('updateAssignee').innerHTML = '<option value="NO_CHANGE">TAHAN DI SAYA</option>' + optDelegasi.replace('<option value="SELF">👤 KERJAKAN SENDIRI</option>', '');
+
+       let optProdInput = '<option value="">-- PILIH PRODUK --</option>'; 
+       let optProdFilter = '<option value="ALL">SEMUA PRODUK</option>';
+       allProducts.forEach(p => { 
+           optProdInput += '<option value="' + p.nama + '">' + p.nama + '</option>'; 
+           optProdFilter += '<option value="' + p.nama + '">' + p.nama + '</option>'; 
+       });
+       document.getElementById('inputProdukSelect').innerHTML = optProdInput; 
+       document.getElementById('filterRiwayatProduk').innerHTML = optProdFilter;
+       
+       renderManageProductUI();
+    }
+
+    function loginApp() {
+      const val = document.getElementById('loginUserSelect').value;
+      if(!val) return;
+      
+      const parts = val.split('|'); 
+      activeUser = { id: parts[0], role: parts[1], nama: parts[2] };
+      
+      document.getElementById('headerRoleName').innerText = activeUser.nama.split(' ')[0];
+      document.getElementById('kpiTitle').innerText = (activeUser.role === "ADMIN") ? "TARGET TIM KESELURUHAN" : "TARGET PRIBADI";
+      
+      renderNavigation();
+      if(activeUser.role === "ADMIN") { 
+          document.getElementById('leaderboardSection').classList.remove('hidden'); 
+          switchMenu('kpi');
+      } else { 
+          document.getElementById('leaderboardSection').classList.add('hidden'); 
+          switchMenu('input');
+      }
+      
+      let selRiwayat = document.getElementById('filterRiwayatStaff');
+      let optsRiwayat = '<option value="ALL">SEMUA STAF TERLIBAT</option>';
+      allUsers.forEach(u => { 
+          if(activeUser.role === "ADMIN" || u.id === activeUser.id) {
+              optsRiwayat += '<option value="' + u.id + '">' + u.nama + '</option>';
+          }
+      });
+      selRiwayat.innerHTML = optsRiwayat;
+      document.getElementById('filterRiwayatStaff').value = "ALL";
+      document.getElementById('filterSearchNasabah').value = "";
+
+      document.getElementById('view-gateway').classList.add('hidden'); 
+      document.getElementById('mainApp').classList.remove('hidden');
+      refreshDataServer();
+    }
+
+    function logoutApp() { 
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('view-gateway').classList.remove('hidden'); 
+        activeUser = { id: '', role: '', nama: '' };
+        document.getElementById('loginUserSelect').value = "";
+    }
+
+    function renderNavigation() {
+        let nav = document.getElementById('bottomNav');
+        let html = '';
+        if(activeUser.role === 'ADMIN') {
+            html += '<button id="nav-kpi" onclick="switchMenu(\'kpi\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-chart-pie text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">KINERJA</span></button>';
+            html += '<button id="nav-pipeline" onclick="switchMenu(\'pipeline\')" class="nav-item flex flex-col items-center p-2 relative"><i class="fa-solid fa-users-viewfinder text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">PANTAUAN</span><span id="navAlert" class="absolute top-1 right-[25%] bg-rose-500 w-2 h-2 rounded-full border border-white hidden shadow-sm"></span></button>';
+            html += '<button id="nav-riwayat" onclick="switchMenu(\'riwayat\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-clock-rotate-left text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">RIWAYAT</span></button>';
+            html += '<button id="nav-admin" onclick="switchMenu(\'admin\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-server text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">SISTEM</span></button>';
+        } else {
+            html += '<button id="nav-input" onclick="switchMenu(\'input\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-keyboard text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">INPUT</span></button>';
+            html += '<button id="nav-pipeline" onclick="switchMenu(\'pipeline\')" class="nav-item flex flex-col items-center p-2 relative"><i class="fa-solid fa-users-viewfinder text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">TUGAS</span><span id="navAlert" class="absolute top-1 right-[25%] bg-rose-500 w-2.5 h-2.5 rounded-full border-2 border-white hidden shadow-md"></span></button>';
+            html += '<button id="nav-kpi" onclick="switchMenu(\'kpi\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-chart-pie text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">KINERJA</span></button>';
+            html += '<button id="nav-riwayat" onclick="switchMenu(\'riwayat\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-clock-rotate-left text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">RIWAYAT</span></button>';
+        }
+        nav.innerHTML = html;
+    }
+
+    function switchMenu(viewId) {
+      if(viewId === 'input') requestLocationUpdate();
+      
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById('view-' + viewId).classList.remove('hidden');
+      
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); 
+      document.getElementById('nav-' + viewId).classList.add('active');
+      
+      if(viewId === 'admin') renderManageStaffUI(); 
+      else if(viewId !== 'input') refreshDataServer();
+    }
+
+    function togglePipelineTab(tipe) { /* Kode tidak berubah */
+        document.getElementById('tabAktif').classList.remove('active'); 
+        document.getElementById('tabTunggu').classList.remove('active');
+        document.getElementById('pipeContentAktif').classList.add('hidden'); 
+        document.getElementById('pipeContentTunggu').classList.add('hidden');
+        if(tipe === 'aktif') { 
+            document.getElementById('tabAktif').classList.add('active'); 
+            document.getElementById('pipeContentAktif').classList.remove('hidden');
+        } else { 
+            document.getElementById('tabTunggu').classList.add('active'); 
+            document.getElementById('pipeContentTunggu').classList.remove('hidden');
+        }
+    }
+
+    function toggleAdminTab(tipe) { /* Kode tidak berubah */
+        document.getElementById('tabAdminStaf').classList.remove('active'); 
+        document.getElementById('tabAdminProduk').classList.remove('active');
+        document.getElementById('adminContentStaf').classList.add('hidden'); 
+        document.getElementById('adminContentProduk').classList.add('hidden');
+        
+        if(tipe === 'staf') { 
+            document.getElementById('tabAdminStaf').classList.add('active'); 
+            document.getElementById('adminContentStaf').classList.remove('hidden');
+        } else { 
+            document.getElementById('tabAdminProduk').classList.add('active'); 
+            document.getElementById('adminContentProduk').classList.remove('hidden');
+        }
+    }
+
+    // CRUD USER
+    function renderManageStaffUI() { /* Kode tidak berubah, hanya render string */
+        let cont = document.getElementById('manageStaffContainer');
+        let html = "";
+        allUsers.forEach(u => {
+            let badge = u.akses === 'ADMIN' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600';
+            html += '<div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex items-center justify-between">' +
+                '<div><p class="text-xs font-black text-slate-800 uppercase">' + u.nama + '</p>' +
+                '<div class="flex items-center space-x-2 mt-1"><span class="text-[8px] ' + badge + ' px-1.5 py-0.5 rounded font-extrabold uppercase">' + u.akses + '</span>' + 
+                (u.akses === 'USER' ? '<span class="text-[8px] bg-bpd-blue/10 text-bpd-blue px-1.5 py-0.5 rounded font-bold">TARGET: ' + u.target + ' (' + u.periode + ')</span>' : '') + 
+                '</div></div><div class="flex space-x-1">' +
+                '<button onclick="openStaffForm(\'EDIT\', \'' + u.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>' +
+                '<button onclick="deleteStaff(\'' + u.id + '\', \'' + u.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>' +
+                '</div></div>';
+        });
+        cont.innerHTML = html;
+    }
+
+    function renderManageProductUI() { /* Kode tidak berubah */
+        let cont = document.getElementById('manageProductContainer');
+        let html = "";
+        allProducts.forEach(p => {
+            html += '<div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex items-center justify-between">' +
+                '<div><p class="text-xs font-black text-slate-800 uppercase">' + p.nama + '</p>' +
+                '<p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"><i class="fa-solid fa-tag mr-1"></i>' + p.kategori + '</p></div>' +
+                '<div class="flex space-x-1">' +
+                '<button onclick="openProductForm(\'EDIT\', \'' + p.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>' +
+                '<button onclick="deleteProduct(\'' + p.id + '\', \'' + p.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>' +
+                '</div></div>';
+        });
+        if(cont) cont.innerHTML = html;
+    }
+
+    function openStaffForm(a, id = '') { /* Kode tidak berubah */
+        document.getElementById('staffFormAction').value = a;
+        document.getElementById('staffFormId').value = id;
+        document.getElementById('staffFormTitle').innerHTML = a === 'ADD' ? 'TAMBAH STAF' : 'EDIT STAF';
+        if(a === 'EDIT') {
+            let u = allUsers.find(x => x.id === id);
+            if(u) {
+                document.getElementById('staffFormNama').value = u.nama;
+                document.getElementById('staffFormAkses').value = u.akses;
+                document.getElementById('staffFormPeriode').value = u.periode;
+                document.getElementById('staffFormTarget').value = u.target;
+            }
+        } else { document.getElementById('formManageStaff').reset(); }
+        document.getElementById('modalStaffForm').classList.remove('hidden');
+    }
+    function closeStaffForm() { document.getElementById('modalStaffForm').classList.add('hidden'); }
+
+    function openProductForm(a, id = '') { /* Kode tidak berubah */
+        document.getElementById('productFormAction').value = a;
+        document.getElementById('productFormId').value = id;
+        document.getElementById('productFormTitle').innerHTML = a === 'ADD' ? 'TAMBAH PRODUK' : 'EDIT PRODUK';
+        if(a === 'EDIT') {
+            let p = allProducts.find(x => x.id === id);
+            if(p) {
+                document.getElementById('productFormNama').value = p.nama;
+                document.getElementById('productFormKategori').value = p.kategori;
+            }
+        } else { document.getElementById('formManageProduct').reset(); }
+        document.getElementById('modalProductForm').classList.remove('hidden');
+    }
+    function closeProductForm() { document.getElementById('modalProductForm').classList.add('hidden'); }
+
+    // MENGGUNAKAN FETCH UNTUK FORM STAFF
+    document.getElementById('formManageStaff').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let btn = document.getElementById('btnStaffFormSubmit'); 
+        let txt = document.getElementById('txtStaffFormSubmit'); 
+        let spin = document.getElementById('spinStaffFormSubmit');
+        btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden');
+        
+        let payload = {
+            id: document.getElementById('staffFormId').value, 
+            nama: document.getElementById('staffFormNama').value, 
+            akses: document.getElementById('staffFormAkses').value, 
+            periode: document.getElementById('staffFormPeriode').value, 
+            target: parseInt(document.getElementById('staffFormTarget').value) || 0
+        };
+        
+        callGAS("manageUserDb", { crudAction: document.getElementById('staffFormAction').value, payload: payload })
+        .then(res => {
+            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
+            initGateway(res.initData); closeStaffForm(); renderManageStaffUI(); 
+        }).catch(err => {
+            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
+        });
+    });
+
+    // MENGGUNAKAN FETCH UNTUK FORM PRODUK
+    document.getElementById('formManageProduct').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let btn = document.getElementById('btnProductFormSubmit'); 
+        let txt = document.getElementById('txtProductFormSubmit'); 
+        let spin = document.getElementById('spinProductFormSubmit');
+        btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden');
+        
+        let payload = { 
+            id: document.getElementById('productFormId').value, 
+            nama: document.getElementById('productFormNama').value, 
+            kategori: document.getElementById('productFormKategori').value 
+        };
+        
+        callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload })
+        .then(res => {
+            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
+            initGateway(res.initData); closeProductForm(); renderManageProductUI(); 
+        }).catch(err => {
+            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
+        });
+    });
+
+    function deleteStaff(id, nama) { 
+        if(confirm("Yakin menghapus staf: " + nama + "?")) { 
+            callGAS("manageUserDb", { crudAction: 'DELETE', payload: {id: id} })
+            .then(res => { initGateway(res.initData); renderManageStaffUI(); });
+        } 
+    }
+    
+    function deleteProduct(id, nama) { 
+        if(confirm("Yakin menghapus produk: " + nama + "?")) { 
+             callGAS("manageProductDb", { crudAction: 'DELETE', payload: {id: id} })
+            .then(res => { initGateway(res.initData); renderManageProductUI(); });
+        } 
+    }
+
+    // FORM INPUT LOGIC (TIDAK BERUBAH)
+    function checkNasabahExisting() { /* Kode tidak berubah */
+        let val = document.getElementById('inputNasabah').value.toUpperCase().trim();
+        let match = printData.uniqueNasabah ? printData.uniqueNasabah.find(n => n.nama.toUpperCase() === val) : null;
+        if(match) { 
+            document.getElementById('nasabahExistingAlert').classList.remove('hidden'); 
+            let hpF = document.getElementById('inputNoHp');
+            hpF.value = match.hp; 
+            hpF.classList.add('border-emerald-400', 'bg-emerald-50'); 
+            setTimeout(() => { hpF.classList.remove('border-emerald-400', 'bg-emerald-50'); }, 1500);
+        } else { document.getElementById('nasabahExistingAlert').classList.add('hidden'); }
+    }
+
+    function cekStatus() { /* Kode tidak berubah */
+        const s = document.getElementById('statusInput').value;
+        const hpInput = document.getElementById('inputNoHp');
+        const wrapFollowUp = document.getElementById('wrapFollowUp');
+        const wrapDelegasi = document.getElementById('wrapDelegasi');
+        if(s === "PROSPEK") { 
+            wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden');
+            hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
+        } else { 
+            wrapDelegasi.classList.add('hidden'); wrapFollowUp.classList.add('hidden');
+            document.getElementById('inputAssignee').value = "SELF"; 
+            document.getElementById('inputJadwalFollowUp').value = ""; 
+            hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)";
+        }
+    }
+
+    function cekUpdateStatus() { /* Kode tidak berubah */
+        const s = document.getElementById('modalStatus').value;
+        const hpInput = document.getElementById('modalHpTarget');
+        const delWrap = document.getElementById('wrapUpdateDelegasi');
+        const followUpWrap = document.getElementById('wrapUpdateFollowUp');
+        const req = document.getElementById('reqHpUpdate');
+        if (s === "PROSPEK") { 
+            delWrap.classList.remove('hidden'); followUpWrap.classList.remove('hidden');
+            if(hpInput.value.trim() === "") { hpInput.required = true; req.classList.remove('hidden'); } 
+            else { hpInput.required = false; req.classList.add('hidden'); } 
+        } else { 
+            delWrap.classList.add('hidden'); followUpWrap.classList.add('hidden');
+            document.getElementById('updateAssignee').value = "NO_CHANGE"; 
+            document.getElementById('modalJadwalUpdate').value = "";
+            hpInput.required = true; req.classList.remove('hidden');
+        }
+    }
+
+    function cekMetode() { /* Kode tidak berubah */
+      const m = document.getElementById('metode').value;
+      const area = document.getElementById('areaValidasi'); const u = document.getElementById('wrapUpload');
+      area.classList.remove('hidden'); u.classList.add('hidden'); compressedImageBase64 = null; 
+      let prevImg = document.getElementById('previewImg'); if(prevImg) prevImg.classList.add('hidden');
+      document.getElementById('imageStatusText').innerText = "*PILIH SALAH SATU (OTOMATIS KOMPRES)";
+      document.getElementById('imageStatusText').classList.add('text-rose-500');
+      document.getElementById('imageStatusText').classList.remove('text-emerald-500');
+      
+      if(m === 'WHATSAPP' || m === 'TATAP MUKA') { u.classList.remove('hidden'); } 
+      else if(m !== 'TELEPON') { area.classList.add('hidden'); }
+    }
+
+    function compressImage(file, maxWidth, maxHeight, quality) { /* Kode tidak berubah */
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image(); img.src = event.target.result;
+                img.onload = () => {
+                    let w = img.width; let h = img.height;
+                    if (w > h) { if (w > maxWidth) { h = Math.round((h *= maxWidth / w)); w = maxWidth; } } 
+                    else { if (h > maxHeight) { w = Math.round((w *= maxHeight / h)); h = maxHeight; } }
+                    const canv = document.createElement('canvas'); canv.width = w; canv.height = h;
+                    const ctx = canv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canv.toDataURL('image/jpeg', quality));
+                }; 
+                img.onerror = e => reject(e);
+            }; reader.onerror = e => reject(e);
+        });
+    }
+
+    async function handleImageInput(inputElement) { /* Kode tidak berubah */
+        const file = inputElement.files[0]; if(!file) return;
+        let statusTxt = document.getElementById('imageStatusText'); 
+        statusTxt.innerText = "MENGOMPRES FOTO..."; statusTxt.classList.remove('text-rose-500'); statusTxt.classList.add('text-amber-500');
+        try {
+            compressedImageBase64 = await compressImage(file, 800, 800, 0.7);
+            document.getElementById('previewImg').src = compressedImageBase64; 
+            document.getElementById('previewImg').classList.remove('hidden');
+            statusTxt.innerText = "✓ FOTO DISIAPKAN."; statusTxt.classList.remove('text-amber-500'); statusTxt.classList.add('text-emerald-500');
+        } catch (error) { 
+            statusTxt.innerText = "GAGAL MEMPROSES FOTO."; statusTxt.classList.add('text-rose-500'); 
+        }
+    }
+
+    // MENGGUNAKAN FETCH UNTUK SUBMIT ACTIVITY
+    document.getElementById('formInput').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmit'); const btnText = document.getElementById('btnText'); const spinner = document.getElementById('btnSpinner');
+      btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden');
+
+      const obj = Object.fromEntries(new FormData(this));
+      obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; 
+      obj.activeId = activeUser.id; obj.activeNama = activeUser.nama;
+      
+      if((obj.metode === 'TATAP MUKA' || obj.metode === 'WHATSAPP') && !compressedImageBase64) { 
+          alert("BUKTI FOTO WAJIB DILAMPIRKAN."); 
+          btn.disabled = false; btn.classList.remove('opacity-80');
+          btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); 
+          return; 
+      }
+      obj.fileData = compressedImageBase64;
+      
+      callGAS("submitActivity", obj).then(res => {
+          btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden');
+          document.getElementById('formInput').reset(); 
+          document.getElementById('areaValidasi').classList.add('hidden'); 
+          document.getElementById('nasabahExistingAlert').classList.add('hidden'); 
+          cekStatus();
+          compressedImageBase64 = null; 
+          document.getElementById('previewImg').classList.add('hidden');
+          switchMenu('pipeline'); 
+      }).catch(err => {
+          btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden');
+      });
+    });
+
+    function openModalUpdate(hp, produk, nasabah) { /* Kode tidak berubah */
+        requestLocationUpdate();
+        document.getElementById('modalHpTarget').value = hp !== "0" ? hp : ""; 
+        document.getElementById('modalProdukTarget').value = produk;
+        document.getElementById('modalNasabahInput').value = nasabah; 
+        document.getElementById('modalNasabahName').innerText = nasabah;
+        document.getElementById('modalStatus').value = "PROSPEK"; 
+        document.getElementById('modalCatatan').value = "";
+        document.getElementById('updateAssignee').value = "NO_CHANGE";
+        document.getElementById('modalLat').value = latitude; 
+        document.getElementById('modalLng').value = longitude;
+        document.getElementById('modalJadwalUpdate').value = "";
+        cekUpdateStatus(); document.getElementById('modalUpdate').classList.remove('hidden');
+    }
+
+    // MENGGUNAKAN FETCH UNTUK UPDATE PIPELINE
+    document.getElementById('formUpdate').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnUpdateSubmit'); btn.innerText = "PROCESSING..."; btn.disabled = true;
+        
+        let objData = {
+            hpTarget: document.getElementById('modalHpTarget').value, produkTarget: document.getElementById('modalProdukTarget').value,
+            nasabahTarget: document.getElementById('modalNasabahInput').value, statusUpdate: document.getElementById('modalStatus').value,
+            catatanUpdate: document.getElementById('modalCatatan').value, assigneeId: document.getElementById('updateAssignee').value,
+            jadwalFollowUpUpdate: document.getElementById('modalJadwalUpdate').value, lat: latitude, lng: longitude, 
+            activeId: activeUser.id, activeNama: activeUser.nama
+        };
+        
+        callGAS("updatePipelineStatus", objData).then(res => {
+            btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; 
+            closeModalUpdate(); refreshDataServer(); 
+        }).catch(err => {
+            btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; 
+        });
+    });
+
+    // SEMUA FUNGSI UI MODAL & RENDERING BAWAH INI TIDAK BERUBAH KARENA HANYA MEMBACA printData
+    function openKpiDetail(type) { /* ... isi sesuai kode asli ... */ }
+    function closeKpiDetail() { /* ... isi sesuai kode asli ... */ }
+    function openJourneyByData(hp, produk) { /* ... isi sesuai kode asli ... */ }
+    function openJourney(index) { /* ... isi sesuai kode asli ... */ }
+    function closeJourney() { /* ... isi sesuai kode asli ... */ }
+    function openStaffStats(idUser) { /* ... isi sesuai kode asli ... */ }
+    function closeStaffStats() { /* ... isi sesuai kode asli ... */ }
+    function closeModalUpdate() { document.getElementById('modalUpdate').classList.add('hidden'); }
+    function renderHistoryUI() { /* ... isi sesuai kode asli ... */ }
+    function cetakPDF() { /* ... isi sesuai kode asli ... */ }
+
+    // MENGGUNAKAN FETCH UNTUK GET DASHBOARD DATA
+    function refreshDataServer() {
+      let startD = document.getElementById('filterStart').value;
+      let endD = document.getElementById('filterEnd').value;
+      const c1 = document.getElementById('pipeContentAktif'); const c2 = document.getElementById('pipeContentTunggu');
+      const c3 = document.getElementById('riwayatContainer'); const c4 = document.getElementById('leaderboardContainer');
+      const l = '<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-bpd-blue text-3xl"></i></div>';
+      
+      c1.innerHTML=l; c2.innerHTML=l; c3.innerHTML=l; if(activeUser.role==="ADMIN") c4.innerHTML=l;
+      
+      callGAS("getDashboardData", { userId: activeUser.id, userAkses: activeUser.role, startStr: startD, endStr: endD })
+      .then(data => {
+         // --- LOGIKA RENDER DATA SAMA PERSIS SEPERTI SEBELUMNYA ---
+         printData = data;
+         /* (Copy-paste blok logika di dalam 'google.script.run...getDashboardData' milikmu yang mengatur DOM di sini) */
+         /* Karena terlalu panjang, saya menyingkatnya sedikit untuk contoh struktur, tapi pastikan kamu menaruh kembali render DOM-nya */
+         document.getElementById('kpiClosing').innerText = data.stats.closing; 
+         document.getElementById('kpiTarget').innerText = data.stats.target;
+         // ... dst (gunakan kode render DOM aslimu di sini)
+      });
+    }
+
+</script>
