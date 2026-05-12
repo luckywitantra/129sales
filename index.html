@@ -1,23 +1,279 @@
-<script>
-    // ==========================================================
-    // DECOUPLED ARCHITECTURE: GITHUB PAGES <--> APPS SCRIPT API
-    // ==========================================================
-    
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxuX_-mhAW56IhLD9qPyWfzLCyuBcfkVcVDcxNCliy_Ouv_0LuDLVh4qqqJ-LQJlvbM/exec"; // Masukkan URL Web App GAS "Anyone" disini
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Super App CRM - Bankaltimtara</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+    .bg-bpd-blue { background-color: #004A8D; } 
+    .bg-bpd-orange { background-color: #F37021; } 
+    .text-bpd-orange { color: #F37021; } 
+    .text-bpd-blue { color: #004A8D; }
+    .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border-top: 1px solid rgba(0,0,0,0.05); }
+    .card-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); border: 1px solid rgba(226, 232, 240, 0.8); }
+    .input-field { background-color: #F1F5F9; border: 1.5px solid transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-transform: uppercase; }
+    .input-field:focus { border-color: #004A8D; background-color: #FFFFFF; outline: none; box-shadow: 0 0 0 4px rgba(0, 74, 141, 0.1); }
+    .nav-item { color: #94A3B8; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); flex: 1; cursor: pointer; }
+    .nav-item.active { color: #F37021; transform: translateY(-3px); } 
+    .nav-item.active i { transform: scale(1.15); }
+    .progress-fill { transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    ::-webkit-scrollbar { display: none; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; } 
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; opacity: 0; transform: translateY(20px); } 
+    @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+    .tab-btn { padding: 10px 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; border-bottom: 2px solid transparent; transition: all 0.3s; }
+    .tab-btn.active { color: #004A8D; border-bottom-color: #004A8D; }
+    .admin-tab { padding: 12px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #94A3B8; background: transparent; transition: all 0.3s; border-radius: 12px; }
+    .admin-tab.active { background: #004A8D; color: white; box-shadow: 0 4px 10px rgba(0,74,141,0.2); }
+    .pulse-red { animation: pulseRed 2s infinite; }
+    @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+    @media print { body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; } #printArea { position: absolute; left: 0; top: 0; width: 100%; background: #ffffff; padding: 15px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; } .no-print { display: none !important; } }
+  </style>
+</head>
+<body class="text-slate-800 pb-24 selection:bg-blue-200">
+
+  <div id="view-gateway" class="fixed inset-0 bg-bpd-blue z-[200] flex flex-col items-center justify-center p-6 animate-fade-in no-print">
+     <div class="text-center mb-8">
+         <h1 class="text-5xl font-black text-white tracking-tight">CRM<span class="text-bpd-orange">PRO</span></h1>
+         <p class="text-blue-200 text-sm font-semibold tracking-widest mt-2 uppercase">Kolaborasi Perbankan</p>
+     </div>
+     <div class="w-full max-w-sm bg-white p-8 rounded-[2rem] shadow-2xl">
+        <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-3 text-center">Identitas Akses</label>
+        <div class="relative mb-6">
+            <i class="fa-solid fa-user-circle absolute left-4 top-[18px] text-bpd-blue text-lg"></i>
+            <select id="loginUserSelect" class="w-full p-4 pl-12 border-2 border-slate-100 rounded-2xl text-sm font-black text-slate-700 focus:border-bpd-blue outline-none appearance-none bg-slate-50">
+                <option value="">MEMUAT DATA...</option>
+            </select>
+        </div>
+        <button onclick="loginApp()" class="w-full bg-bpd-orange hover:bg-[#d95c14] active:scale-95 text-white font-black py-4 rounded-2xl shadow-lg transition-all text-sm tracking-widest flex justify-center items-center uppercase">
+           MASUK SISTEM <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+     </div>
+  </div>
+
+  <div id="modalKpiDetail" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[130] flex items-center justify-center p-4 animate-fade-in no-print">
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col max-h-[90vh]">
+         <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+             <div><h3 class="font-black text-slate-800 text-base uppercase" id="modalKpiDetailTitle">DETAIL INTERAKSI</h3><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SINGLE CUSTOMER VIEW</p></div>
+             <button onclick="closeKpiDetail()" class="text-slate-400 hover:text-rose-500 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+         </div>
+         <div id="modalKpiDetailContent" class="space-y-4 overflow-y-auto pr-2 pb-2"></div>
+      </div>
+  </div>
+
+  <div id="modalStaffStats" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[130] flex items-center justify-center p-4 animate-fade-in no-print">
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col border-t-8 border-bpd-blue max-h-[90vh]">
+         <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-3 shrink-0">
+             <div><h3 class="font-black text-slate-800 text-lg uppercase" id="statStaffName">STAF</h3><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 inline-block px-2 py-1 rounded mt-1" id="statStaffPeriode">PERIODE</p></div>
+             <button onclick="closeStaffStats()" class="text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center"><i class="fa-solid fa-xmark"></i></button>
+         </div>
+         <div class="overflow-y-auto pr-2 pb-2">
+             <div class="grid grid-cols-3 gap-2 mb-5">
+                 <div class="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100"><p class="text-[9px] font-extrabold text-emerald-600 uppercase mb-1">DEALS</p><p class="text-xl font-black text-emerald-700" id="statDeals">0</p></div>
+                 <div class="bg-amber-50 rounded-xl p-3 text-center border border-amber-100"><p class="text-[9px] font-extrabold text-amber-600 uppercase mb-1">PROSPEK</p><p class="text-xl font-black text-amber-700" id="statProspek">0</p></div>
+                 <div class="bg-rose-50 rounded-xl p-3 text-center border border-rose-100"><p class="text-[9px] font-extrabold text-rose-600 uppercase mb-1">LOST</p><p class="text-xl font-black text-rose-700" id="statLostDetail">0</p></div>
+             </div>
+             <h4 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1"><i class="fa-solid fa-chess-knight text-bpd-orange mr-1"></i> STRATEGI PENAWARAN</h4>
+             <div class="space-y-2 mb-5" id="statStaffStrategi"></div>
+             <h4 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1"><i class="fa-solid fa-medal text-bpd-blue mr-1"></i> PENGUASAAN PRODUK</h4>
+             <div id="statStaffProducts" class="space-y-4"></div>
+         </div>
+      </div>
+  </div>
+
+  <div id="modalStaffForm" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[130] flex items-center justify-center p-4 animate-fade-in no-print">
+     <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3 shrink-0">
+           <h3 class="font-extrabold text-slate-800 text-base uppercase" id="staffFormTitle">FORM STAF</h3>
+           <button onclick="closeStaffForm()" class="text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="formManageStaff" class="space-y-4">
+           <input type="hidden" id="staffFormAction" value="ADD">
+           <input type="hidden" id="staffFormId" value="">
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">NAMA LENGKAP</label><input type="text" id="staffFormNama" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"></div>
+           <div class="grid grid-cols-2 gap-3">
+               <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">HAK AKSES</label><select id="staffFormAkses" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"><option value="USER">USER</option><option value="ADMIN">ADMIN</option></select></div>
+               <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">PERIODE TARGET</label><select id="staffFormPeriode" class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"><option value="Bulanan">BULANAN</option><option value="Mingguan">MINGGUAN</option></select></div>
+           </div>
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">TARGET DEALS</label><input type="number" id="staffFormTarget" value="0" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700"></div>
+           <div class="pt-2"><button type="submit" id="btnStaffFormSubmit" class="w-full bg-bpd-blue text-white font-extrabold py-3.5 rounded-xl shadow-lg transition-all text-sm tracking-widest flex justify-center items-center uppercase"><span id="txtStaffFormSubmit">SIMPAN DATA</span><i id="spinStaffFormSubmit" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i></button></div>
+        </form>
+     </div>
+  </div>
+
+  <div id="modalProductForm" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[130] flex items-center justify-center p-4 animate-fade-in no-print">
+     <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3 shrink-0">
+           <h3 class="font-extrabold text-slate-800 text-base uppercase" id="productFormTitle"><i class="fa-solid fa-cart-plus text-emerald-500 mr-2"></i>TAMBAH PRODUK</h3>
+           <button onclick="closeProductForm()" class="text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="formManageProduct" class="space-y-4">
+           <input type="hidden" id="productFormAction" value="ADD">
+           <input type="hidden" id="productFormId" value="">
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">NAMA PRODUK</label><input type="text" id="productFormNama" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"></div>
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">KATEGORI</label><select id="productFormKategori" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"><option value="KREDIT">KREDIT</option><option value="DANA">DANA (TABUNGAN/DEPOSITO)</option><option value="LAYANAN">LAYANAN / JASA</option><option value="LAINNYA">LAINNYA</option></select></div>
+           <div class="pt-2"><button type="submit" id="btnProductFormSubmit" class="w-full bg-bpd-blue text-white font-extrabold py-3.5 rounded-xl shadow-lg transition-all text-sm tracking-widest flex justify-center items-center uppercase"><span id="txtProductFormSubmit">SIMPAN DATA</span><i id="spinProductFormSubmit" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i></button></div>
+        </form>
+     </div>
+  </div>
+
+  <div id="modalJourney" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4 animate-fade-in no-print">
+     <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4 shrink-0 border-b border-slate-100 pb-3">
+           <h3 class="font-extrabold text-slate-800 text-base uppercase tracking-wider"><i class="fa-solid fa-route text-bpd-orange mr-2"></i>JEJAK NASABAH</h3>
+           <button onclick="closeJourney()" class="text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="journeyHeader" class="mb-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 shrink-0 uppercase"></div>
+        <div class="overflow-y-auto flex-1 pr-2">
+            <div class="relative border-l-2 border-[#004A8D] opacity-80 ml-3 pl-5 space-y-5 py-2" id="journeyTimeline"></div>
+        </div>
+     </div>
+  </div>
+
+  <div id="modalUpdate" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in no-print">
+     <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+        <h3 class="font-extrabold text-slate-800 text-lg mb-1 uppercase"><i class="fa-solid fa-pen-to-square text-bpd-blue mr-2"></i>TINDAK LANJUT PIPELINE</h3>
+        <p id="modalNasabahName" class="text-xs font-bold text-slate-400 mb-4 bg-slate-50 p-2 rounded-lg border border-slate-100 uppercase"></p>
+        <form id="formUpdate" class="space-y-4">
+           <input type="hidden" id="modalProdukTarget"><input type="hidden" id="modalNasabahInput"><input type="hidden" id="modalLat"><input type="hidden" id="modalLng">
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">NOMOR WHATSAPP <span id="reqHpUpdate" class="text-rose-500 hidden">*WAJIB</span></label><input type="tel" id="modalHpTarget" oninput="cekUpdateStatus()" placeholder="CONTOH: 08..." class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"></div>
+           <div id="wrapUpdateFollowUp"><label class="text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest mb-1.5 block"><i class="fa-regular fa-calendar mr-1"></i> JADWALKAN FOLLOW UP</label><input type="date" id="modalJadwalUpdate" name="jadwalFollowUpUpdate" class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-emerald-700 bg-emerald-50 border-emerald-100"></div>
+           <div id="wrapUpdateDelegasi"><label class="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest mb-1.5 block"><i class="fa-solid fa-share-nodes mr-1"></i> OPER BOLA KE: (OPSIONAL)</label><select id="updateAssignee" name="assigneeId" class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-indigo-700 bg-indigo-50 border-indigo-100 uppercase"></select></div>
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">STATUS PROGRESS</label><select id="modalStatus" onchange="cekUpdateStatus()" required class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-slate-700 uppercase"><option value="PROSPEK">🟡 FOLLOW UP LAGI (TETAP PROSPEK)</option><option value="CLOSING">🟢 DEAL (CLOSING)</option><option value="DITOLAK">🔴 LOST (DITOLAK)</option></select></div>
+           <div><label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 block">CATATAN PROGRESS</label><textarea id="modalCatatan" required oninput="this.value = this.value.toUpperCase()" placeholder="CONTOH: TELEPON TIDAK DIANGKAT..." class="input-field w-full p-3.5 rounded-xl text-sm h-20 resize-none uppercase"></textarea></div>
+           <div class="flex space-x-3 pt-2"><button type="button" onclick="closeModalUpdate()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl text-sm uppercase">BATAL</button><button type="submit" id="btnUpdateSubmit" class="flex-1 bg-bpd-blue text-white font-bold py-3 rounded-xl text-sm shadow-lg uppercase">SIMPAN UPDATE</button></div>
+        </form>
+     </div>
+  </div>
+
+  <div id="mainApp" class="hidden">
+      <div class="bg-bpd-blue text-white px-5 py-4 sticky top-0 z-40 flex justify-between items-center shadow-md no-print">
+        <div><h1 class="text-lg font-extrabold tracking-wide uppercase">CRM<span class="text-bpd-orange">PRO</span></h1><p id="headerWelcome" class="text-[10px] text-blue-200 font-medium uppercase tracking-widest mt-0.5">BANKALTIMTARA</p></div>
+        <div onclick="logoutApp()" class="bg-[#003B73] border border-[#002D5A] px-3 py-1.5 rounded-full flex items-center shadow-inner cursor-pointer hover:bg-rose-600 transition-colors uppercase"><span id="headerRoleName" class="text-[10px] font-bold text-white uppercase truncate max-w-[80px] mr-2">NAMA</span><i class="fa-solid fa-right-from-bracket text-blue-200 text-[12px]"></i></div>
+      </div>
+
+      <div class="bg-white px-4 py-2.5 border-b border-slate-200 flex space-x-2 items-center justify-between shadow-sm sticky top-[62px] sm:top-[68px] z-30 no-print">
+          <div class="flex items-center space-x-1.5 flex-1"><input type="date" id="filterStart" class="text-[10px] font-bold text-slate-600 border border-slate-300 rounded px-2 py-1.5 w-full outline-none focus:border-bpd-blue"><span class="text-slate-400 text-[10px]">-</span><input type="date" id="filterEnd" class="text-[10px] font-bold text-slate-600 border border-slate-300 rounded px-2 py-1.5 w-full outline-none focus:border-bpd-blue"></div>
+          <button onclick="refreshDataServer()" class="bg-bpd-blue active:bg-[#003B73] text-white text-[10px] font-extrabold px-3 py-1.5 rounded shadow-md ml-2 transition-all"><i class="fa-solid fa-rotate-right"></i></button>
+          <button onclick="cetakPDF()" class="bg-rose-600 active:bg-rose-800 text-white text-[10px] font-extrabold px-3 py-1.5 rounded shadow-md ml-1 transition-all"><i class="fa-solid fa-file-pdf"></i></button>
+      </div>
+
+      <main class="p-4 w-full max-w-md mx-auto no-print">
+        
+        <section id="view-input" class="view-section hidden animate-fade-in space-y-4">
+          <div class="bg-white p-6 rounded-3xl card-shadow">
+            <h2 class="text-sm font-extrabold text-bpd-blue mb-5 flex items-center uppercase tracking-wider"><i class="fa-solid fa-pen-to-square text-bpd-orange mr-2.5 text-lg"></i> INPUT PENAWARAN</h2>
+            <form id="formInput" class="space-y-4">
+              <input type="text" id="inputNasabah" name="nasabah" list="nasabahList" oninput="checkNasabahExisting(); this.value = this.value.toUpperCase();" placeholder="NAMA LENGKAP NASABAH" required autocomplete="off" class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-700 uppercase">
+              <datalist id="nasabahList"></datalist>
+              <div id="nasabahExistingAlert" class="hidden bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-[10px] text-emerald-700 font-bold mb-3 shadow-sm uppercase"><i class="fa-solid fa-check-circle mr-1"></i> NASABAH DITEMUKAN. DATA AKAN DISINKRONKAN.</div>
+              <input type="tel" id="inputNoHp" name="noHp" placeholder="NOMOR WHATSAPP (OPSIONAL)" autocomplete="off" class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-700 uppercase">
+              <div class="grid grid-cols-2 gap-3">
+                <select name="produk" id="inputProdukSelect" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="">PRODUK...</option></select>
+                <select name="jenis" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="AKUISISI BARU">AKUISISI BARU</option><option value="CROSS SELLING">CROSS SELLING</option><option value="UPSELLING">UPSELLING</option></select>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                 <select name="metode" id="metode" onchange="cekMetode()" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="">METODE...</option><option value="TATAP MUKA">TATAP MUKA</option><option value="TELEPON">TELEPON</option><option value="WHATSAPP">WHATSAPP</option></select>
+                 <select name="status" id="statusInput" onchange="cekStatus()" required class="input-field w-full p-4 rounded-2xl text-sm font-bold text-slate-700 uppercase"><option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option></select>
+              </div>
+              <div id="wrapFollowUp" class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl space-y-2"><label class="text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest block"><i class="fa-regular fa-calendar mr-1"></i> JADWALKAN FOLLOW UP</label><input type="date" name="jadwalFollowUp" id="inputJadwalFollowUp" class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-emerald-700 bg-white"></div>
+              <div id="wrapDelegasi" class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl space-y-2"><label class="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest block"><i class="fa-solid fa-share-nodes mr-1"></i> OPER BOLA KE: (OPSIONAL)</label><select id="inputAssignee" name="assigneeId" class="input-field w-full p-3.5 rounded-xl text-sm font-bold text-indigo-700 uppercase"></select></div>
+              <div id="areaValidasi" class="hidden bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3 transition-all duration-300">
+                 <div id="wrapDurasi" class="hidden"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">DURASI TELEPON (DETIK)</label><input type="number" name="durasi" class="input-field w-full p-3 rounded-xl text-sm"></div>
+                 <div id="wrapUpload" class="hidden">
+                    <label id="labelUpload" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">BUKTI VISUAL (WAJIB)</label>
+                    <div class="flex space-x-2 mb-2">
+                        <label class="flex-1 bg-white border border-bpd-blue text-bpd-blue text-xs font-bold py-2.5 rounded-xl text-center cursor-pointer hover:bg-blue-50 transition-colors uppercase"><i class="fa-solid fa-camera mr-1"></i> KAMERA<input type="file" id="fileCamera" accept="image/*" capture="environment" class="hidden" onchange="handleImageInput(this)"></label>
+                        <label class="flex-1 bg-white border border-slate-300 text-slate-600 text-xs font-bold py-2.5 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition-colors uppercase"><i class="fa-regular fa-image mr-1"></i> GALERI<input type="file" id="fileGallery" accept="image/*" class="hidden" onchange="handleImageInput(this)"></label>
+                    </div>
+                    <p id="imageStatusText" class="text-[9px] text-rose-500 italic font-semibold">*PILIH SALAH SATU (OTOMATIS KOMPRES)</p>
+                    <img id="previewImg" class="hidden w-full h-32 object-cover rounded-xl mt-2 border border-slate-200 shadow-sm">
+                 </div>
+              </div>
+              <textarea name="catatan" oninput="this.value = this.value.toUpperCase()" placeholder="CATATAN HASIL PENAWARAN..." class="input-field w-full p-4 rounded-2xl text-sm h-16 resize-none uppercase"></textarea>
+              <button type="submit" id="btnSubmit" class="w-full bg-bpd-blue active:scale-[0.98] text-white font-extrabold py-4 rounded-2xl shadow-lg transition-all text-sm tracking-widest uppercase flex justify-center items-center"><span id="btnText">SIMPAN DATA</span><i id="btnSpinner" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i></button>
+            </form>
+          </div>
+        </section>
+
+        <section id="view-pipeline" class="view-section hidden animate-fade-in space-y-4">
+          <div class="flex bg-white rounded-2xl card-shadow p-1">
+             <button onclick="togglePipelineTab('aktif')" id="tabAktif" class="flex-1 tab-btn active">🔥 TUGAS SAYA</button>
+             <button onclick="togglePipelineTab('tunggu')" id="tabTunggu" class="flex-1 tab-btn">⏳ OPER KE REKAN</button>
+          </div>
+          <div id="pipeContentAktif" class="space-y-4"></div><div id="pipeContentTunggu" class="space-y-4 hidden"></div>
+        </section>
+
+        <section id="view-kpi" class="view-section hidden animate-fade-in space-y-4">
+          <div class="bg-gradient-to-br from-[#004A8D] to-[#002D5A] p-6 rounded-[2rem] shadow-xl text-white relative overflow-hidden cursor-pointer hover:shadow-2xl transition-all" onclick="openStaffStats(activeUser.id)">
+            <div class="absolute -right-8 -top-8 opacity-10 text-9xl text-bpd-orange"><i class="fa-solid fa-chart-line"></i></div>
+            <div class="flex justify-between items-start relative z-10"><h3 class="text-[10px] uppercase tracking-widest font-bold text-blue-200 mb-1" id="kpiTitle">TARGET PENCAPAIAN</h3><span class="text-[9px] bg-[#003B73] text-bpd-orange px-2 py-1 rounded font-bold uppercase"><i class="fa-solid fa-search-plus mr-1"></i>DETAIL</span></div>
+            <div class="flex items-end space-x-2 mb-5 mt-2 relative z-10"><span class="text-5xl font-black tracking-tighter" id="kpiClosing">0</span><span class="text-sm font-semibold text-blue-200 mb-1.5 uppercase">/ <span id="kpiTarget">0</span> (<span id="kpiPeriode">BLN</span>)</span></div>
+            <div class="w-full bg-[#002244] rounded-full h-3 mb-2 overflow-hidden shadow-inner border border-[#001A33] relative z-10"><div id="kpiProgress" class="bg-gradient-to-r from-bpd-orange to-[#F9A01B] h-full rounded-full progress-fill" style="width: 0%"></div></div>
+            <p class="text-xs text-blue-100 font-bold text-right tracking-wide relative z-10" id="kpiPercentage">0%</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mt-2 mb-4">
+            <div onclick="openKpiDetail('TOTAL')" class="bg-white p-5 rounded-3xl card-shadow text-center border-b-4 border-bpd-blue cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all"><div class="w-8 h-8 rounded-full bg-blue-50 text-bpd-blue flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-users text-sm"></i></div><p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">NASABAH KELOLAAN</p><h3 id="statTotal" class="text-2xl font-black text-slate-800">0</h3></div>
+            <div onclick="openKpiDetail('LOST')" class="bg-white p-5 rounded-3xl card-shadow text-center border-b-4 border-rose-500 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all"><div class="w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-xmark text-sm"></i></div><p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">LOST LEADS</p><h3 id="statLost" class="text-2xl font-black text-rose-500">0</h3></div>
+          </div>
+          <div class="bg-white p-5 rounded-3xl card-shadow mb-6">
+              <h3 class="font-extrabold text-bpd-blue mb-3 text-sm uppercase tracking-wider flex items-center"><i class="fa-solid fa-chart-area text-bpd-orange mr-2"></i> TREN CLOSING (TAHUN INI)</h3>
+              <div class="w-full h-40"><canvas id="trendChart"></canvas></div>
+          </div>
+          <div id="leaderboardSection" class="hidden mt-6 pb-4">
+             <h3 class="font-extrabold text-bpd-blue mb-3 text-sm uppercase tracking-wider flex items-center"><i class="fa-solid fa-ranking-star text-bpd-orange mr-2 text-lg"></i> PERINGKAT KINERJA TIM</h3>
+             <div id="leaderboardContainer" class="space-y-3"></div>
+          </div>
+        </section>
+
+        <section id="view-riwayat" class="view-section hidden animate-fade-in space-y-4">
+          <div class="bg-white p-4 rounded-3xl card-shadow mb-4 space-y-3 sticky top-[108px] z-20">
+             <div class="relative"><i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-sm"></i><input type="text" id="filterSearchNasabah" onkeyup="renderHistoryUI()" placeholder="CARI NAMA NASABAH..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-xs focus:border-bpd-blue outline-none transition-colors uppercase"></div>
+             <div class="flex space-x-2">
+                 <select id="filterRiwayatStaff" onchange="renderHistoryUI()" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[10px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"></select>
+                 <select id="filterRiwayatProduk" onchange="renderHistoryUI()" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[10px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"><option value="ALL">SEMUA PRODUK</option></select>
+             </div>
+          </div>
+          <div id="riwayatContainer" class="space-y-4 pb-4"></div>
+        </section>
+
+        <section id="view-admin" class="view-section hidden animate-fade-in space-y-4">
+           <div class="flex bg-white rounded-2xl card-shadow p-1 mb-2 uppercase"><button onclick="toggleAdminTab('staf')" id="tabAdminStaf" class="flex-1 admin-tab active">MANAJEMEN STAF</button><button onclick="toggleAdminTab('produk')" id="tabAdminProduk" class="flex-1 admin-tab">KATALOG PRODUK</button></div>
+           <div id="adminContentStaf" class="space-y-4">
+               <button onclick="openStaffForm('ADD')" class="w-full bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold py-3 rounded-xl shadow-sm transition-colors uppercase"><i class="fa-solid fa-plus mr-1"></i> TAMBAH STAF BARU</button>
+               <div id="manageStaffContainer" class="space-y-3 pb-4"></div>
+           </div>
+           <div id="adminContentProduk" class="space-y-4 hidden">
+               <button onclick="openProductForm('ADD')" class="w-full bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 text-xs font-bold py-3 rounded-xl shadow-sm transition-colors uppercase"><i class="fa-solid fa-plus mr-1"></i> TAMBAH PRODUK BARU</button>
+               <div id="manageProductContainer" class="space-y-3 pb-4"></div>
+           </div>
+        </section>
+      </main>
+      <nav id="bottomNav" class="fixed bottom-0 w-full glass-nav flex justify-around items-center pb-safe pt-3 px-1 z-50 no-print"></nav>
+  </div>
+
+  <div id="printArea" class="hidden"></div>
+
+  <script>
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby5AKJx3DDe8-CjkeRO9oDqalBOCpdtH3vLLy65kom03jEBhO7lMvx8zpacH0aHWwU/exec"; // Wajib ganti ini
 
     async function callGAS(actionName, dataPayload = {}) {
       try {
         const response = await fetch(GAS_API_URL, {
           method: "POST",
           body: JSON.stringify({ action: actionName, data: dataPayload }),
-          headers: { "Content-Type": "text/plain;charset=utf-8" } // Mencegah preflight CORS error di GAS
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
         });
         const json = await response.json();
-        
-        if (!json.success) {
-          console.error("GAS Error:", json.msg);
-          throw new Error(json.msg);
-        }
+        if (!json.success) throw new Error(json.msg);
         return json.data;
       } catch (error) {
         alert("Koneksi Server Gagal: " + error.message);
@@ -25,14 +281,10 @@
       }
     }
 
-    // STATE LOKAL
     let activeUser = { id: '', role: '', nama: '' }; 
     let latitude = 0, longitude = 0; 
     let printData = { stats: {}, activeTasks: [], delegatedTasks: [], history: [], leaderboard: [], uniqueNasabah: [], trendData: [], trendLabels: [] };
-    let allUsers = []; 
-    let allProducts = []; 
-    let compressedImageBase64 = null; 
-    let myChart = null;
+    let allUsers = []; let allProducts = []; let compressedImageBase64 = null; let myChart = null;
 
     function requestLocationUpdate() {
         if(navigator.geolocation) {
@@ -44,101 +296,50 @@
         }
     }
 
-    window.onload = () => {
-      requestLocationUpdate();
-      function getLocalIsoString(d) { 
-          let z = function(n) { return ('0'+n).slice(-2); }; 
-          return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate());
-      }
-      
-      let date = new Date();
-      let firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-      document.getElementById('filterStart').value = getLocalIsoString(firstDay); 
-      document.getElementById('filterEnd').value = getLocalIsoString(date);
-      
-      // MENGGUNAKAN FETCH API MENGGANTIKAN google.script.run
-      callGAS("getAppInitData").then(initData => {
-         initGateway(initData);
-      }).catch(err => {
-         document.getElementById('loginUserSelect').innerHTML = '<option value="">ERROR KONEKSI SERVER</option>';
-      });
-    };
-
     function initGateway(initData) {
-       allUsers = initData.users; 
-       allProducts = initData.products;
-       
-       let sel = document.getElementById('loginUserSelect');
-       let opts = "";
-       allUsers.forEach(u => { 
-           opts += '<option value="' + u.id + '|' + u.akses + '|' + u.nama + '">' + u.nama + ' (' + u.akses + ')</option>'; 
-       });
+       allUsers = initData.users; allProducts = initData.products;
+       let sel = document.getElementById('loginUserSelect'); let opts = "";
+       allUsers.forEach(u => { opts += '<option value="' + u.id + '|' + u.akses + '|' + u.nama + '">' + u.nama + ' (' + u.akses + ')</option>'; });
        sel.innerHTML = opts || '<option value="">TIDAK ADA DATA STAF</option>';
 
        let optDelegasi = '<option value="SELF">👤 KERJAKAN SENDIRI</option>';
-       allUsers.forEach(u => { 
-           if(u.akses === "USER") optDelegasi += '<option value="' + u.id + '|' + u.nama + '">🤝 OPER KE: ' + u.nama + '</option>'; 
-       });
+       allUsers.forEach(u => { if(u.akses === "USER") optDelegasi += '<option value="' + u.id + '|' + u.nama + '">🤝 OPER KE: ' + u.nama + '</option>'; });
        document.getElementById('inputAssignee').innerHTML = optDelegasi;
        document.getElementById('updateAssignee').innerHTML = '<option value="NO_CHANGE">TAHAN DI SAYA</option>' + optDelegasi.replace('<option value="SELF">👤 KERJAKAN SENDIRI</option>', '');
 
-       let optProdInput = '<option value="">-- PILIH PRODUK --</option>'; 
-       let optProdFilter = '<option value="ALL">SEMUA PRODUK</option>';
+       let optProdInput = '<option value="">-- PILIH PRODUK --</option>'; let optProdFilter = '<option value="ALL">SEMUA PRODUK</option>';
        allProducts.forEach(p => { 
            optProdInput += '<option value="' + p.nama + '">' + p.nama + '</option>'; 
            optProdFilter += '<option value="' + p.nama + '">' + p.nama + '</option>'; 
        });
-       document.getElementById('inputProdukSelect').innerHTML = optProdInput; 
-       document.getElementById('filterRiwayatProduk').innerHTML = optProdFilter;
-       
+       document.getElementById('inputProdukSelect').innerHTML = optProdInput; document.getElementById('filterRiwayatProduk').innerHTML = optProdFilter;
        renderManageProductUI();
     }
 
     function loginApp() {
-      const val = document.getElementById('loginUserSelect').value;
-      if(!val) return;
-      
-      const parts = val.split('|'); 
-      activeUser = { id: parts[0], role: parts[1], nama: parts[2] };
-      
+      const val = document.getElementById('loginUserSelect').value; if(!val) return;
+      const parts = val.split('|'); activeUser = { id: parts[0], role: parts[1], nama: parts[2] };
       document.getElementById('headerRoleName').innerText = activeUser.nama.split(' ')[0];
-      document.getElementById('kpiTitle').innerText = (activeUser.role === "ADMIN") ? "TARGET TIM KESELURUHAN" : "TARGET PRIBADI";
+      document.getElementById('kpiTitle').innerText = (activeUser.role === "ADMIN") ? "TARGET TIM" : "TARGET PRIBADI";
       
       renderNavigation();
-      if(activeUser.role === "ADMIN") { 
-          document.getElementById('leaderboardSection').classList.remove('hidden'); 
-          switchMenu('kpi');
-      } else { 
-          document.getElementById('leaderboardSection').classList.add('hidden'); 
-          switchMenu('input');
-      }
+      if(activeUser.role === "ADMIN") { document.getElementById('leaderboardSection').classList.remove('hidden'); switchMenu('kpi'); } 
+      else { document.getElementById('leaderboardSection').classList.add('hidden'); switchMenu('input'); }
       
-      let selRiwayat = document.getElementById('filterRiwayatStaff');
-      let optsRiwayat = '<option value="ALL">SEMUA STAF TERLIBAT</option>';
-      allUsers.forEach(u => { 
-          if(activeUser.role === "ADMIN" || u.id === activeUser.id) {
-              optsRiwayat += '<option value="' + u.id + '">' + u.nama + '</option>';
-          }
-      });
-      selRiwayat.innerHTML = optsRiwayat;
-      document.getElementById('filterRiwayatStaff').value = "ALL";
-      document.getElementById('filterSearchNasabah').value = "";
-
-      document.getElementById('view-gateway').classList.add('hidden'); 
-      document.getElementById('mainApp').classList.remove('hidden');
+      let selRiwayat = document.getElementById('filterRiwayatStaff'); let optsRiwayat = '<option value="ALL">SEMUA STAF TERLIBAT</option>';
+      allUsers.forEach(u => { if(activeUser.role === "ADMIN" || u.id === activeUser.id) optsRiwayat += '<option value="' + u.id + '">' + u.nama + '</option>'; });
+      selRiwayat.innerHTML = optsRiwayat; document.getElementById('filterRiwayatStaff').value = "ALL"; document.getElementById('filterSearchNasabah').value = "";
+      document.getElementById('view-gateway').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden');
       refreshDataServer();
     }
 
     function logoutApp() { 
-        document.getElementById('mainApp').classList.add('hidden');
-        document.getElementById('view-gateway').classList.remove('hidden'); 
-        activeUser = { id: '', role: '', nama: '' };
-        document.getElementById('loginUserSelect').value = "";
+        document.getElementById('mainApp').classList.add('hidden'); document.getElementById('view-gateway').classList.remove('hidden'); 
+        activeUser = { id: '', role: '', nama: '' }; document.getElementById('loginUserSelect').value = "";
     }
 
     function renderNavigation() {
-        let nav = document.getElementById('bottomNav');
-        let html = '';
+        let nav = document.getElementById('bottomNav'); let html = '';
         if(activeUser.role === 'ADMIN') {
             html += '<button id="nav-kpi" onclick="switchMenu(\'kpi\')" class="nav-item flex flex-col items-center p-2"><i class="fa-solid fa-chart-pie text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">KINERJA</span></button>';
             html += '<button id="nav-pipeline" onclick="switchMenu(\'pipeline\')" class="nav-item flex flex-col items-center p-2 relative"><i class="fa-solid fa-users-viewfinder text-[20px] mb-1.5"></i><span class="text-[9px] font-extrabold tracking-wide uppercase">PANTAUAN</span><span id="navAlert" class="absolute top-1 right-[25%] bg-rose-500 w-2 h-2 rounded-full border border-white hidden shadow-sm"></span></button>';
@@ -155,234 +356,119 @@
 
     function switchMenu(viewId) {
       if(viewId === 'input') requestLocationUpdate();
-      
-      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-      document.getElementById('view-' + viewId).classList.remove('hidden');
-      
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); 
-      document.getElementById('nav-' + viewId).classList.add('active');
-      
-      if(viewId === 'admin') renderManageStaffUI(); 
-      else if(viewId !== 'input') refreshDataServer();
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden')); document.getElementById('view-' + viewId).classList.remove('hidden');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + viewId).classList.add('active');
+      if(viewId === 'admin') renderManageStaffUI(); else if(viewId !== 'input') refreshDataServer();
     }
 
-    function togglePipelineTab(tipe) { /* Kode tidak berubah */
-        document.getElementById('tabAktif').classList.remove('active'); 
-        document.getElementById('tabTunggu').classList.remove('active');
-        document.getElementById('pipeContentAktif').classList.add('hidden'); 
-        document.getElementById('pipeContentTunggu').classList.add('hidden');
-        if(tipe === 'aktif') { 
-            document.getElementById('tabAktif').classList.add('active'); 
-            document.getElementById('pipeContentAktif').classList.remove('hidden');
-        } else { 
-            document.getElementById('tabTunggu').classList.add('active'); 
-            document.getElementById('pipeContentTunggu').classList.remove('hidden');
-        }
+    function togglePipelineTab(tipe) {
+        document.getElementById('tabAktif').classList.remove('active'); document.getElementById('tabTunggu').classList.remove('active');
+        document.getElementById('pipeContentAktif').classList.add('hidden'); document.getElementById('pipeContentTunggu').classList.add('hidden');
+        if(tipe === 'aktif') { document.getElementById('tabAktif').classList.add('active'); document.getElementById('pipeContentAktif').classList.remove('hidden'); } 
+        else { document.getElementById('tabTunggu').classList.add('active'); document.getElementById('pipeContentTunggu').classList.remove('hidden'); }
     }
 
-    function toggleAdminTab(tipe) { /* Kode tidak berubah */
-        document.getElementById('tabAdminStaf').classList.remove('active'); 
-        document.getElementById('tabAdminProduk').classList.remove('active');
-        document.getElementById('adminContentStaf').classList.add('hidden'); 
-        document.getElementById('adminContentProduk').classList.add('hidden');
-        
-        if(tipe === 'staf') { 
-            document.getElementById('tabAdminStaf').classList.add('active'); 
-            document.getElementById('adminContentStaf').classList.remove('hidden');
-        } else { 
-            document.getElementById('tabAdminProduk').classList.add('active'); 
-            document.getElementById('adminContentProduk').classList.remove('hidden');
-        }
+    function toggleAdminTab(tipe) {
+        document.getElementById('tabAdminStaf').classList.remove('active'); document.getElementById('tabAdminProduk').classList.remove('active');
+        document.getElementById('adminContentStaf').classList.add('hidden'); document.getElementById('adminContentProduk').classList.add('hidden');
+        if(tipe === 'staf') { document.getElementById('tabAdminStaf').classList.add('active'); document.getElementById('adminContentStaf').classList.remove('hidden'); } 
+        else { document.getElementById('tabAdminProduk').classList.add('active'); document.getElementById('adminContentProduk').classList.remove('hidden'); }
     }
 
-    // CRUD USER
-    function renderManageStaffUI() { /* Kode tidak berubah, hanya render string */
-        let cont = document.getElementById('manageStaffContainer');
-        let html = "";
+    function renderManageStaffUI() {
+        let cont = document.getElementById('manageStaffContainer'); let html = "";
         allUsers.forEach(u => {
             let badge = u.akses === 'ADMIN' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600';
             html += '<div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex items-center justify-between">' +
-                '<div><p class="text-xs font-black text-slate-800 uppercase">' + u.nama + '</p>' +
-                '<div class="flex items-center space-x-2 mt-1"><span class="text-[8px] ' + badge + ' px-1.5 py-0.5 rounded font-extrabold uppercase">' + u.akses + '</span>' + 
-                (u.akses === 'USER' ? '<span class="text-[8px] bg-bpd-blue/10 text-bpd-blue px-1.5 py-0.5 rounded font-bold">TARGET: ' + u.target + ' (' + u.periode + ')</span>' : '') + 
-                '</div></div><div class="flex space-x-1">' +
-                '<button onclick="openStaffForm(\'EDIT\', \'' + u.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>' +
-                '<button onclick="deleteStaff(\'' + u.id + '\', \'' + u.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>' +
-                '</div></div>';
+                '<div><p class="text-xs font-black text-slate-800 uppercase">' + u.nama + '</p><div class="flex items-center space-x-2 mt-1"><span class="text-[8px] ' + badge + ' px-1.5 py-0.5 rounded font-extrabold uppercase">' + u.akses + '</span>' + (u.akses === 'USER' ? '<span class="text-[8px] bg-bpd-blue/10 text-bpd-blue px-1.5 py-0.5 rounded font-bold">TARGET: ' + u.target + ' (' + u.periode + ')</span>' : '') + '</div></div><div class="flex space-x-1"><button onclick="openStaffForm(\'EDIT\', \'' + u.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button><button onclick="deleteStaff(\'' + u.id + '\', \'' + u.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button></div></div>';
         });
         cont.innerHTML = html;
     }
 
-    function renderManageProductUI() { /* Kode tidak berubah */
-        let cont = document.getElementById('manageProductContainer');
-        let html = "";
+    function renderManageProductUI() {
+        let cont = document.getElementById('manageProductContainer'); let html = "";
         allProducts.forEach(p => {
             html += '<div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex items-center justify-between">' +
-                '<div><p class="text-xs font-black text-slate-800 uppercase">' + p.nama + '</p>' +
-                '<p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"><i class="fa-solid fa-tag mr-1"></i>' + p.kategori + '</p></div>' +
-                '<div class="flex space-x-1">' +
-                '<button onclick="openProductForm(\'EDIT\', \'' + p.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>' +
-                '<button onclick="deleteProduct(\'' + p.id + '\', \'' + p.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>' +
-                '</div></div>';
+                '<div><p class="text-xs font-black text-slate-800 uppercase">' + p.nama + '</p><p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"><i class="fa-solid fa-tag mr-1"></i>' + p.kategori + '</p></div><div class="flex space-x-1"><button onclick="openProductForm(\'EDIT\', \'' + p.id + '\')" class="w-7 h-7 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button><button onclick="deleteProduct(\'' + p.id + '\', \'' + p.nama + '\')" class="w-7 h-7 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button></div></div>';
         });
         if(cont) cont.innerHTML = html;
     }
 
-    function openStaffForm(a, id = '') { /* Kode tidak berubah */
-        document.getElementById('staffFormAction').value = a;
-        document.getElementById('staffFormId').value = id;
+    function openStaffForm(a, id = '') {
+        document.getElementById('staffFormAction').value = a; document.getElementById('staffFormId').value = id;
         document.getElementById('staffFormTitle').innerHTML = a === 'ADD' ? 'TAMBAH STAF' : 'EDIT STAF';
         if(a === 'EDIT') {
             let u = allUsers.find(x => x.id === id);
-            if(u) {
-                document.getElementById('staffFormNama').value = u.nama;
-                document.getElementById('staffFormAkses').value = u.akses;
-                document.getElementById('staffFormPeriode').value = u.periode;
-                document.getElementById('staffFormTarget').value = u.target;
-            }
+            if(u) { document.getElementById('staffFormNama').value = u.nama; document.getElementById('staffFormAkses').value = u.akses; document.getElementById('staffFormPeriode').value = u.periode; document.getElementById('staffFormTarget').value = u.target; }
         } else { document.getElementById('formManageStaff').reset(); }
         document.getElementById('modalStaffForm').classList.remove('hidden');
     }
     function closeStaffForm() { document.getElementById('modalStaffForm').classList.add('hidden'); }
 
-    function openProductForm(a, id = '') { /* Kode tidak berubah */
-        document.getElementById('productFormAction').value = a;
-        document.getElementById('productFormId').value = id;
+    function openProductForm(a, id = '') {
+        document.getElementById('productFormAction').value = a; document.getElementById('productFormId').value = id;
         document.getElementById('productFormTitle').innerHTML = a === 'ADD' ? 'TAMBAH PRODUK' : 'EDIT PRODUK';
         if(a === 'EDIT') {
             let p = allProducts.find(x => x.id === id);
-            if(p) {
-                document.getElementById('productFormNama').value = p.nama;
-                document.getElementById('productFormKategori').value = p.kategori;
-            }
+            if(p) { document.getElementById('productFormNama').value = p.nama; document.getElementById('productFormKategori').value = p.kategori; }
         } else { document.getElementById('formManageProduct').reset(); }
         document.getElementById('modalProductForm').classList.remove('hidden');
     }
     function closeProductForm() { document.getElementById('modalProductForm').classList.add('hidden'); }
 
-    // MENGGUNAKAN FETCH UNTUK FORM STAFF
-    document.getElementById('formManageStaff').addEventListener('submit', function(e) {
-        e.preventDefault();
-        let btn = document.getElementById('btnStaffFormSubmit'); 
-        let txt = document.getElementById('txtStaffFormSubmit'); 
-        let spin = document.getElementById('spinStaffFormSubmit');
-        btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden');
-        
-        let payload = {
-            id: document.getElementById('staffFormId').value, 
-            nama: document.getElementById('staffFormNama').value, 
-            akses: document.getElementById('staffFormAkses').value, 
-            periode: document.getElementById('staffFormPeriode').value, 
-            target: parseInt(document.getElementById('staffFormTarget').value) || 0
-        };
-        
-        callGAS("manageUserDb", { crudAction: document.getElementById('staffFormAction').value, payload: payload })
-        .then(res => {
-            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
-            initGateway(res.initData); closeStaffForm(); renderManageStaffUI(); 
-        }).catch(err => {
-            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
-        });
-    });
-
-    // MENGGUNAKAN FETCH UNTUK FORM PRODUK
-    document.getElementById('formManageProduct').addEventListener('submit', function(e) {
-        e.preventDefault();
-        let btn = document.getElementById('btnProductFormSubmit'); 
-        let txt = document.getElementById('txtProductFormSubmit'); 
-        let spin = document.getElementById('spinProductFormSubmit');
-        btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden');
-        
-        let payload = { 
-            id: document.getElementById('productFormId').value, 
-            nama: document.getElementById('productFormNama').value, 
-            kategori: document.getElementById('productFormKategori').value 
-        };
-        
-        callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload })
-        .then(res => {
-            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
-            initGateway(res.initData); closeProductForm(); renderManageProductUI(); 
-        }).catch(err => {
-            btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden');
-        });
-    });
-
     function deleteStaff(id, nama) { 
-        if(confirm("Yakin menghapus staf: " + nama + "?")) { 
-            callGAS("manageUserDb", { crudAction: 'DELETE', payload: {id: id} })
-            .then(res => { initGateway(res.initData); renderManageStaffUI(); });
-        } 
+        if(confirm("Yakin menghapus staf: " + nama + "?")) { callGAS("manageUserDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { initGateway(res.initData); renderManageStaffUI(); }); } 
     }
     
     function deleteProduct(id, nama) { 
-        if(confirm("Yakin menghapus produk: " + nama + "?")) { 
-             callGAS("manageProductDb", { crudAction: 'DELETE', payload: {id: id} })
-            .then(res => { initGateway(res.initData); renderManageProductUI(); });
-        } 
+        if(confirm("Yakin menghapus produk: " + nama + "?")) { callGAS("manageProductDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { initGateway(res.initData); renderManageProductUI(); }); } 
     }
 
-    // FORM INPUT LOGIC (TIDAK BERUBAH)
-    function checkNasabahExisting() { /* Kode tidak berubah */
+    function checkNasabahExisting() {
         let val = document.getElementById('inputNasabah').value.toUpperCase().trim();
         let match = printData.uniqueNasabah ? printData.uniqueNasabah.find(n => n.nama.toUpperCase() === val) : null;
         if(match) { 
-            document.getElementById('nasabahExistingAlert').classList.remove('hidden'); 
-            let hpF = document.getElementById('inputNoHp');
-            hpF.value = match.hp; 
-            hpF.classList.add('border-emerald-400', 'bg-emerald-50'); 
+            document.getElementById('nasabahExistingAlert').classList.remove('hidden'); let hpF = document.getElementById('inputNoHp');
+            hpF.value = match.hp; hpF.classList.add('border-emerald-400', 'bg-emerald-50'); 
             setTimeout(() => { hpF.classList.remove('border-emerald-400', 'bg-emerald-50'); }, 1500);
         } else { document.getElementById('nasabahExistingAlert').classList.add('hidden'); }
     }
 
-    function cekStatus() { /* Kode tidak berubah */
-        const s = document.getElementById('statusInput').value;
-        const hpInput = document.getElementById('inputNoHp');
-        const wrapFollowUp = document.getElementById('wrapFollowUp');
-        const wrapDelegasi = document.getElementById('wrapDelegasi');
+    function cekStatus() {
+        const s = document.getElementById('statusInput').value; const hpInput = document.getElementById('inputNoHp');
+        const wrapFollowUp = document.getElementById('wrapFollowUp'); const wrapDelegasi = document.getElementById('wrapDelegasi');
         if(s === "PROSPEK") { 
-            wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden');
-            hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
+            wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden'); hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
         } else { 
             wrapDelegasi.classList.add('hidden'); wrapFollowUp.classList.add('hidden');
-            document.getElementById('inputAssignee').value = "SELF"; 
-            document.getElementById('inputJadwalFollowUp').value = ""; 
-            hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)";
+            document.getElementById('inputAssignee').value = "SELF"; document.getElementById('inputJadwalFollowUp').value = ""; hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)";
         }
     }
 
-    function cekUpdateStatus() { /* Kode tidak berubah */
-        const s = document.getElementById('modalStatus').value;
-        const hpInput = document.getElementById('modalHpTarget');
-        const delWrap = document.getElementById('wrapUpdateDelegasi');
-        const followUpWrap = document.getElementById('wrapUpdateFollowUp');
-        const req = document.getElementById('reqHpUpdate');
+    function cekUpdateStatus() {
+        const s = document.getElementById('modalStatus').value; const hpInput = document.getElementById('modalHpTarget');
+        const delWrap = document.getElementById('wrapUpdateDelegasi'); const followUpWrap = document.getElementById('wrapUpdateFollowUp'); const req = document.getElementById('reqHpUpdate');
         if (s === "PROSPEK") { 
             delWrap.classList.remove('hidden'); followUpWrap.classList.remove('hidden');
-            if(hpInput.value.trim() === "") { hpInput.required = true; req.classList.remove('hidden'); } 
-            else { hpInput.required = false; req.classList.add('hidden'); } 
+            if(hpInput.value.trim() === "") { hpInput.required = true; req.classList.remove('hidden'); } else { hpInput.required = false; req.classList.add('hidden'); } 
         } else { 
             delWrap.classList.add('hidden'); followUpWrap.classList.add('hidden');
-            document.getElementById('updateAssignee').value = "NO_CHANGE"; 
-            document.getElementById('modalJadwalUpdate').value = "";
+            document.getElementById('updateAssignee').value = "NO_CHANGE"; document.getElementById('modalJadwalUpdate').value = "";
             hpInput.required = true; req.classList.remove('hidden');
         }
     }
 
-    function cekMetode() { /* Kode tidak berubah */
+    function cekMetode() {
       const m = document.getElementById('metode').value;
       const area = document.getElementById('areaValidasi'); const u = document.getElementById('wrapUpload');
       area.classList.remove('hidden'); u.classList.add('hidden'); compressedImageBase64 = null; 
       let prevImg = document.getElementById('previewImg'); if(prevImg) prevImg.classList.add('hidden');
       document.getElementById('imageStatusText').innerText = "*PILIH SALAH SATU (OTOMATIS KOMPRES)";
-      document.getElementById('imageStatusText').classList.add('text-rose-500');
-      document.getElementById('imageStatusText').classList.remove('text-emerald-500');
-      
-      if(m === 'WHATSAPP' || m === 'TATAP MUKA') { u.classList.remove('hidden'); } 
-      else if(m !== 'TELEPON') { area.classList.add('hidden'); }
+      document.getElementById('imageStatusText').classList.add('text-rose-500'); document.getElementById('imageStatusText').classList.remove('text-emerald-500');
+      if(m === 'WHATSAPP' || m === 'TATAP MUKA') { u.classList.remove('hidden'); } else if(m !== 'TELEPON') { area.classList.add('hidden'); }
     }
 
-    function compressImage(file, maxWidth, maxHeight, quality) { /* Kode tidak berubah */
+    function compressImage(file, maxWidth, maxHeight, quality) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = event => {
@@ -394,110 +480,97 @@
                     const canv = document.createElement('canvas'); canv.width = w; canv.height = h;
                     const ctx = canv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
                     resolve(canv.toDataURL('image/jpeg', quality));
-                }; 
-                img.onerror = e => reject(e);
+                }; img.onerror = e => reject(e);
             }; reader.onerror = e => reject(e);
         });
     }
 
-    async function handleImageInput(inputElement) { /* Kode tidak berubah */
+    async function handleImageInput(inputElement) {
         const file = inputElement.files[0]; if(!file) return;
         let statusTxt = document.getElementById('imageStatusText'); 
         statusTxt.innerText = "MENGOMPRES FOTO..."; statusTxt.classList.remove('text-rose-500'); statusTxt.classList.add('text-amber-500');
         try {
             compressedImageBase64 = await compressImage(file, 800, 800, 0.7);
-            document.getElementById('previewImg').src = compressedImageBase64; 
-            document.getElementById('previewImg').classList.remove('hidden');
+            document.getElementById('previewImg').src = compressedImageBase64; document.getElementById('previewImg').classList.remove('hidden');
             statusTxt.innerText = "✓ FOTO DISIAPKAN."; statusTxt.classList.remove('text-amber-500'); statusTxt.classList.add('text-emerald-500');
-        } catch (error) { 
-            statusTxt.innerText = "GAGAL MEMPROSES FOTO."; statusTxt.classList.add('text-rose-500'); 
-        }
+        } catch (error) { statusTxt.innerText = "GAGAL MEMPROSES FOTO."; statusTxt.classList.add('text-rose-500'); }
     }
 
-    // MENGGUNAKAN FETCH UNTUK SUBMIT ACTIVITY
-    document.getElementById('formInput').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmit'); const btnText = document.getElementById('btnText'); const spinner = document.getElementById('btnSpinner');
-      btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden');
-
-      const obj = Object.fromEntries(new FormData(this));
-      obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; 
-      obj.activeId = activeUser.id; obj.activeNama = activeUser.nama;
-      
-      if((obj.metode === 'TATAP MUKA' || obj.metode === 'WHATSAPP') && !compressedImageBase64) { 
-          alert("BUKTI FOTO WAJIB DILAMPIRKAN."); 
-          btn.disabled = false; btn.classList.remove('opacity-80');
-          btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); 
-          return; 
-      }
-      obj.fileData = compressedImageBase64;
-      
-      callGAS("submitActivity", obj).then(res => {
-          btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden');
-          document.getElementById('formInput').reset(); 
-          document.getElementById('areaValidasi').classList.add('hidden'); 
-          document.getElementById('nasabahExistingAlert').classList.add('hidden'); 
-          cekStatus();
-          compressedImageBase64 = null; 
-          document.getElementById('previewImg').classList.add('hidden');
-          switchMenu('pipeline'); 
-      }).catch(err => {
-          btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden');
-      });
-    });
-
-    function openModalUpdate(hp, produk, nasabah) { /* Kode tidak berubah */
+    function openModalUpdate(hp, produk, nasabah) {
         requestLocationUpdate();
-        document.getElementById('modalHpTarget').value = hp !== "0" ? hp : ""; 
-        document.getElementById('modalProdukTarget').value = produk;
-        document.getElementById('modalNasabahInput').value = nasabah; 
-        document.getElementById('modalNasabahName').innerText = nasabah;
-        document.getElementById('modalStatus').value = "PROSPEK"; 
-        document.getElementById('modalCatatan').value = "";
-        document.getElementById('updateAssignee').value = "NO_CHANGE";
-        document.getElementById('modalLat').value = latitude; 
-        document.getElementById('modalLng').value = longitude;
-        document.getElementById('modalJadwalUpdate').value = "";
+        document.getElementById('modalHpTarget').value = hp !== "0" ? hp : ""; document.getElementById('modalProdukTarget').value = produk;
+        document.getElementById('modalNasabahInput').value = nasabah; document.getElementById('modalNasabahName').innerText = nasabah;
+        document.getElementById('modalStatus').value = "PROSPEK"; document.getElementById('modalCatatan').value = "";
+        document.getElementById('updateAssignee').value = "NO_CHANGE"; document.getElementById('modalLat').value = latitude; 
+        document.getElementById('modalLng').value = longitude; document.getElementById('modalJadwalUpdate').value = "";
         cekUpdateStatus(); document.getElementById('modalUpdate').classList.remove('hidden');
     }
 
-    // MENGGUNAKAN FETCH UNTUK UPDATE PIPELINE
-    document.getElementById('formUpdate').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnUpdateSubmit'); btn.innerText = "PROCESSING..."; btn.disabled = true;
-        
-        let objData = {
-            hpTarget: document.getElementById('modalHpTarget').value, produkTarget: document.getElementById('modalProdukTarget').value,
-            nasabahTarget: document.getElementById('modalNasabahInput').value, statusUpdate: document.getElementById('modalStatus').value,
-            catatanUpdate: document.getElementById('modalCatatan').value, assigneeId: document.getElementById('updateAssignee').value,
-            jadwalFollowUpUpdate: document.getElementById('modalJadwalUpdate').value, lat: latitude, lng: longitude, 
-            activeId: activeUser.id, activeNama: activeUser.nama
-        };
-        
-        callGAS("updatePipelineStatus", objData).then(res => {
-            btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; 
-            closeModalUpdate(); refreshDataServer(); 
-        }).catch(err => {
-            btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; 
+    function openKpiDetail(type) {
+        let title = type === 'TOTAL' ? "NASABAH KELOLAAN" : "DETAIL LOST LEADS";
+        let rawList = type === 'TOTAL' ? printData.history : printData.history.filter(h => h.status === 'DITOLAK');
+        let grouped = {}; rawList.forEach(h => { if(!grouped[h.nasabah]) grouped[h.nasabah] = []; grouped[h.nasabah].push(h); });
+        let html = "";
+        if(Object.keys(grouped).length === 0) { html = "<p class='text-xs text-center text-slate-400 py-10'>DATA KOSONG</p>"; } 
+        else {
+            for(let nsb in grouped) {
+                let caseHtml = "";
+                grouped[nsb].forEach(h => {
+                    let badgeClass = h.status === "CLOSING" ? "text-emerald-600" : (h.status === "PROSPEK" ? "text-amber-600" : "text-rose-600");
+                    caseHtml += '<div class="flex justify-between items-start border-t border-slate-100 mt-1.5 pt-1.5 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors" onclick="openJourneyByData(\''+h.hp+'\',\''+h.produk+'\')"><div class="flex-1 pr-2"><p class="text-[10px] font-black text-bpd-blue">' + h.produk + ' <span class="text-slate-400 font-normal">(' + h.tim + ')</span></p></div><span class="' + badgeClass + ' text-[9px] font-extrabold uppercase tracking-widest">' + h.status + '</span></div>';
+                });
+                html += '<div class="bg-white p-3 rounded-xl border border-slate-200 mb-3 shadow-sm"><div class="flex justify-between items-center mb-1"><p class="text-xs font-black text-slate-800 uppercase"><i class="fa-solid fa-user-circle text-bpd-blue mr-1"></i> ' + nsb + '</p></div><p class="text-[9px] font-bold text-slate-500 mb-2">' + grouped[nsb][0].hp + '</p><div class="bg-slate-50 p-2 rounded-xl">' + caseHtml + '</div></div>';
+            }
+        }
+        document.getElementById('modalKpiDetailTitle').innerText = title;
+        document.getElementById('modalKpiDetailContent').innerHTML = html; document.getElementById('modalKpiDetail').classList.remove('hidden');
+    }
+
+    function closeKpiDetail() { document.getElementById('modalKpiDetail').classList.add('hidden'); }
+    function openJourneyByData(hp, produk) { let idx = printData.history.findIndex(h => h.hp === hp && h.produk === produk); if(idx !== -1) { closeKpiDetail(); openJourney(idx); } }
+
+    function openJourney(index) {
+        let h = printData.history[index];
+        let headerHtml = '<p class="font-black text-slate-800 text-lg mb-0.5 uppercase">' + h.nasabah + '</p><div class="flex items-center space-x-2"><span class="text-[10px] bg-orange-100 text-bpd-orange px-2 py-1 rounded font-bold uppercase">' + h.produk + '</span><span class="text-[10px] font-bold text-slate-500"><i class="fa-brands fa-whatsapp text-emerald-500 mr-1"></i>' + h.hp + '</span></div>';
+        document.getElementById('journeyHeader').innerHTML = headerHtml; let timelineHtml = "";
+        h.logs.forEach(log => {
+            let badge = log.status === "CLOSING" ? "bg-emerald-500" : (log.status === "DITOLAK" ? "bg-rose-500" : "bg-amber-500");
+            let btnFoto = (log.bukti && log.bukti !== "No File") ? '<a href="' + log.bukti + '" target="_blank" class="mt-2 inline-block bg-blue-50 text-bpd-blue text-[9px] font-bold px-2 py-1 rounded-md transition-colors hover:bg-blue-100 mr-1"><i class="fa-solid fa-image"></i> BUKTI</a>' : '';
+            let btnMaps = (log.maps && log.maps !== "") ? '<a href="' + log.maps + '" target="_blank" class="mt-2 inline-block bg-rose-50 text-rose-600 text-[9px] font-bold px-2 py-1 rounded-md transition-colors hover:bg-rose-100"><i class="fa-solid fa-location-dot"></i> LOKASI</a>' : '';
+            timelineHtml += '<div class="relative animate-slide-up"><span class="absolute -left-[25px] top-2 w-3 h-3 rounded-full ' + badge + ' border-[3px] border-white shadow-sm"></span><div class="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm"><div class="flex justify-between items-start mb-1"><p class="text-[10px] font-black text-slate-800 uppercase">' + log.aktor + '</p><p class="text-[8px] font-bold text-slate-400">' + log.waktu + '</p></div><p class="text-[11px] font-semibold text-slate-600 leading-relaxed uppercase">' + log.catatan + '</p>' + btnFoto + btnMaps + '</div></div>';
         });
-    });
+        document.getElementById('journeyTimeline').innerHTML = timelineHtml; document.getElementById('modalJourney').classList.remove('hidden');
+    }
+    
+    function closeJourney() { document.getElementById('modalJourney').classList.add('hidden'); }
 
-    // SEMUA FUNGSI UI MODAL & RENDERING BAWAH INI TIDAK BERUBAH KARENA HANYA MEMBACA printData
-    function openKpiDetail(type) { /* ... isi sesuai kode asli ... */ }
-    function closeKpiDetail() { /* ... isi sesuai kode asli ... */ }
-    function openJourneyByData(hp, produk) { /* ... isi sesuai kode asli ... */ }
-    function openJourney(index) { /* ... isi sesuai kode asli ... */ }
-    function closeJourney() { /* ... isi sesuai kode asli ... */ }
-    function openStaffStats(idUser) { /* ... isi sesuai kode asli ... */ }
-    function closeStaffStats() { /* ... isi sesuai kode asli ... */ }
+    function openStaffStats(idUser) {
+        let staff = printData.leaderboard.find(s => s.id === idUser); if(!staff) return;
+        document.getElementById('statStaffName').innerText = staff.nama; document.getElementById('statStaffPeriode').innerText = "TARGET " + staff.periode.toUpperCase() + ": " + staff.target;
+        document.getElementById('statDeals').innerText = staff.closing; document.getElementById('statProspek').innerText = staff.prospek; document.getElementById('statLostDetail').innerText = staff.ditolak;
+
+        let totalJenis = staff.jenisMap['CROSS SELLING'] + staff.jenisMap['UPSELLING'] + staff.jenisMap['AKUISISI BARU'];
+        let htmlJenis = "";
+        if(totalJenis === 0) { htmlJenis = "<p class='text-[10px] text-slate-400 italic text-center'>BELUM ADA DATA STRATEGI.</p>"; } 
+        else {
+            let pCS = Math.round((staff.jenisMap['CROSS SELLING']/totalJenis)*100) || 0; let pUP = Math.round((staff.jenisMap['UPSELLING']/totalJenis)*100) || 0; let pAK = Math.round((staff.jenisMap['AKUISISI BARU']/totalJenis)*100) || 0;
+            htmlJenis = '<div class="flex h-4 rounded-full overflow-hidden text-[8px] text-white font-bold text-center">' + (pCS > 0 ? '<div style="width:'+pCS+'%" class="bg-indigo-500 flex items-center justify-center">CS</div>' : '') + (pUP > 0 ? '<div style="width:'+pUP+'%" class="bg-bpd-blue flex items-center justify-center">UP</div>' : '') + (pAK > 0 ? '<div style="width:'+pAK+'%" class="bg-bpd-orange flex items-center justify-center">AK</div>' : '') + '</div><div class="flex justify-between mt-1 text-[8px] text-slate-500 font-bold"><span>CS: '+pCS+'%</span><span>UP: '+pUP+'%</span><span>AK: '+pAK+'%</span></div>';
+        }
+        document.getElementById('statStaffStrategi').innerHTML = htmlJenis;
+
+        let htmlProd = "";
+        if(!staff.produkList || staff.produkList.length === 0) { htmlProd = "<p class='text-xs text-center text-slate-400 py-10'>BELUM ADA INTERAKSI.</p>"; } 
+        else {
+            staff.produkList.forEach(p => { htmlProd += '<div class="mb-4 animate-slide-up"><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1.5 uppercase"><span>' + p.nama + ' (' + p.count + ' NSB)</span><span class="text-bpd-blue font-black">' + p.perc + '%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-bpd-blue h-2 rounded-full" style="width: ' + p.perc + '%"></div></div></div>'; });
+        }
+        document.getElementById('statStaffProducts').innerHTML = htmlProd; document.getElementById('modalStaffStats').classList.remove('hidden');
+    }
+    
+    function closeStaffStats() { document.getElementById('modalStaffStats').classList.add('hidden'); }
     function closeModalUpdate() { document.getElementById('modalUpdate').classList.add('hidden'); }
-    function renderHistoryUI() { /* ... isi sesuai kode asli ... */ }
-    function cetakPDF() { /* ... isi sesuai kode asli ... */ }
 
-    // MENGGUNAKAN FETCH UNTUK GET DASHBOARD DATA
     function refreshDataServer() {
-      let startD = document.getElementById('filterStart').value;
-      let endD = document.getElementById('filterEnd').value;
+      let startD = document.getElementById('filterStart').value; let endD = document.getElementById('filterEnd').value;
       const c1 = document.getElementById('pipeContentAktif'); const c2 = document.getElementById('pipeContentTunggu');
       const c3 = document.getElementById('riwayatContainer'); const c4 = document.getElementById('leaderboardContainer');
       const l = '<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-bpd-blue text-3xl"></i></div>';
@@ -506,14 +579,124 @@
       
       callGAS("getDashboardData", { userId: activeUser.id, userAkses: activeUser.role, startStr: startD, endStr: endD })
       .then(data => {
-         // --- LOGIKA RENDER DATA SAMA PERSIS SEPERTI SEBELUMNYA ---
-         printData = data;
-         /* (Copy-paste blok logika di dalam 'google.script.run...getDashboardData' milikmu yang mengatur DOM di sini) */
-         /* Karena terlalu panjang, saya menyingkatnya sedikit untuk contoh struktur, tapi pastikan kamu menaruh kembali render DOM-nya */
-         document.getElementById('kpiClosing').innerText = data.stats.closing; 
-         document.getElementById('kpiTarget').innerText = data.stats.target;
-         // ... dst (gunakan kode render DOM aslimu di sini)
+        printData = data; 
+        let htmlDl = ""; data.uniqueNasabah.forEach(n => { htmlDl += '<option value="' + n.nama + '">'; }); 
+        document.getElementById('nasabahList').innerHTML = htmlDl;
+
+        const s = data.stats;
+        document.getElementById('kpiClosing').innerText = s.closing; document.getElementById('kpiTarget').innerText = s.target; document.getElementById('kpiPeriode').innerText = s.periodeTarget; 
+        
+        let totalUniqueNasabah = Object.keys(data.history.reduce((acc, obj) => { acc[obj.nasabah] = true; return acc; }, {})).length;
+        document.getElementById('statTotal').innerText = totalUniqueNasabah; document.getElementById('statLost').innerText = s.ditolak;
+        
+        let percentage = s.target === 0 ? 0 : (s.closing / s.target) * 100; if(percentage > 100) percentage = 100;
+        setTimeout(() => { document.getElementById('kpiProgress').style.width = percentage + "%"; }, 100);
+        document.getElementById('kpiPercentage').innerText = percentage.toFixed(0) + "%";
+
+        if(document.getElementById('trendChart')) {
+            let ctx = document.getElementById('trendChart'); if(myChart) { myChart.destroy(); }
+            myChart = new Chart(ctx, {
+                type: 'line', data: { labels: data.trendLabels, datasets: [{ label: 'DEALS BERHASIL', data: data.trendData, backgroundColor: 'rgba(0, 74, 141, 0.1)', borderColor: '#004A8D', borderWidth: 3, pointBackgroundColor: '#F37021', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4, fill: true, tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        let htmlA = "";
+        data.activeTasks.forEach((p, idx) => {
+          let hpLink = p.hp ? p.hp : "0";
+          const waMessage = encodeURIComponent("Halo Bapak/Ibu " + p.nasabah + ", saya " + activeUser.nama + " dari Bankaltimtara. Izin menindaklanjuti...");
+          const waLink = "https://wa.me/" + hpLink + "?text=" + waMessage;
+          let tagPetugas = activeUser.role === "ADMIN" ? '<div class="mb-4"><span class="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-md font-extrabold uppercase tracking-widest"><i class="fa-solid fa-user-tag mr-1"></i> DIPEGANG: ' + p.picSekarang + '</span></div>' : '';
+          let btnChatHtml = (hpLink !== "0") ? '<a href="' + waLink + '" target="_blank" class="flex-1 text-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[10px] font-black py-2.5 rounded-xl uppercase transition-all shadow-sm"><i class="fa-brands fa-whatsapp mr-1.5 text-sm"></i> CHAT</a>' : '<button type="button" disabled class="flex-1 text-center bg-slate-100 text-slate-400 text-[10px] font-black py-2.5 rounded-xl uppercase shadow-sm cursor-not-allowed">WA KOSONG</button>';
+          let alertBorder = "border-l-[5px] border-l-amber-400"; let overdueAnim = "";
+          let textJadwal = '<span class="text-slate-400"><i class="fa-regular fa-calendar-days mr-1"></i> ' + p.jadwal + '</span>';
+          if(p.overdue) { alertBorder = "border-2 border-rose-400 shadow-md"; overdueAnim = "pulse-red"; textJadwal = '<span class="text-rose-500 font-black"><i class="fa-solid fa-triangle-exclamation mr-1"></i> TELAT (' + p.jadwal + ')</span>'; }
+          let slaAging = p.aging > 7 ? '<span class="text-rose-500 font-bold ml-2">(' + p.aging + ' HARI)</span>' : '<span class="text-slate-400 font-bold ml-2">(' + p.aging + ' HARI)</span>';
+          htmlA += '<div class="bg-white p-5 rounded-3xl card-shadow ' + alertBorder + ' ' + overdueAnim + ' relative animate-slide-up" style="animation-delay: ' + (idx*0.05) + 's"><div class="absolute top-4 right-4 text-[9px] font-extrabold">' + textJadwal + '</div><p class="text-[15px] font-black text-slate-800 mb-0.5 tracking-tight pr-20 uppercase">' + p.nasabah + '</p><p class="text-[11px] font-bold text-bpd-blue mb-3 uppercase tracking-widest"><i class="fa-solid fa-cube mr-1"></i> ' + p.produk + slaAging + '</p>' + tagPetugas + '<div class="mt-2 border-t border-slate-100 pt-3 flex justify-between items-center space-x-2"><button onclick="openModalUpdate(\'' + hpLink + '\', \'' + p.produk + '\', \'' + p.nasabah + '\')" class="flex-1 bg-blue-50 text-bpd-blue text-[10px] font-black py-2.5 rounded-xl uppercase transition-all shadow-sm"><i class="fa-solid fa-check-double mr-1.5"></i> UPDATE</button>' + btnChatHtml + '</div></div>';
+        });
+        
+        let htmlT = "";
+        data.delegatedTasks.forEach((p, idx) => {
+          let textJadwal = p.overdue ? '<span class="text-rose-500 font-black"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ' + p.jadwal + '</span>' : '<span class="text-slate-400">' + p.jadwal + '</span>';
+          htmlT += '<div class="bg-white p-5 rounded-3xl card-shadow border-l-[5px] border-l-slate-300 relative opacity-80 animate-slide-up" style="animation-delay: ' + (idx*0.05) + 's"><div class="absolute top-4 right-4 text-[9px] font-extrabold">' + textJadwal + '</div><p class="text-[15px] font-black text-slate-800 mb-0.5 tracking-tight pr-16 uppercase">' + p.nasabah + '</p><p class="text-[11px] font-bold text-slate-500 mb-3 uppercase tracking-widest"><i class="fa-solid fa-cube mr-1"></i> ' + p.produk + '</p><div class="bg-slate-100 p-2.5 rounded-xl text-[10px] font-extrabold text-slate-500 flex items-center"><i class="fa-solid fa-user-clock mr-2 text-lg"></i> MENUNGGU REKAN:<br>' + p.picSekarang + '</div></div>';
+        });
+
+        c1.innerHTML = htmlA || '<div class="text-center py-10"><div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-500 text-2xl mb-2"><i class="fa-solid fa-check"></i></div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SEMUA TUGAS SELESAI</p></div>';
+        c2.innerHTML = htmlT || '<div class="text-center py-10 text-slate-400 text-[10px] font-bold uppercase tracking-widest">TIDAK ADA DELEGASI</div>';
+        if(data.activeTasks.length > 0) { document.getElementById('navAlert').classList.remove('hidden'); document.getElementById('tabAktif').innerHTML = '🔥 TUGAS (' + data.activeTasks.length + ')'; } 
+        else { document.getElementById('navAlert').classList.add('hidden'); document.getElementById('tabAktif').innerHTML = '🔥 TUGAS SAYA'; }
+
+        renderHistoryUI();
+        if(activeUser.role === "ADMIN") {
+            let ldbHtml = ""; let rank = 1;
+            data.leaderboard.forEach(staff => {
+               let staffPercent = staff.target === 0 ? 0 : (staff.closing / staff.target) * 100;
+               let badgeHtml = "";
+               if(staff.badges && staff.badges.length > 0) { staff.badges.forEach(b => { badgeHtml += '<span class="text-[8px] ' + b.class + ' px-1.5 py-0.5 rounded font-bold mr-1"><i class="fa-solid ' + b.icon + '"></i> ' + b.text + '</span>'; }); }
+               let rankBadge = rank === 1 ? 'bg-amber-100 text-bpd-orange' : (rank === 2 ? 'bg-slate-200 text-slate-600' : 'bg-orange-100 text-orange-600');
+               if(rank > 3) rankBadge = 'bg-slate-50 text-slate-400';
+               ldbHtml += '<div class="bg-white p-4 rounded-3xl card-shadow flex items-center cursor-pointer hover:border-bpd-blue border border-transparent transition-all animate-slide-up" onclick="openStaffStats(\'' + staff.id + '\')"><div class="' + rankBadge + ' w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-sm shrink-0 mr-3">#' + rank + '</div><div class="flex-1"><p class="text-xs font-black text-slate-800 uppercase mb-0.5">' + staff.nama + '</p><div class="mb-1.5">' + badgeHtml + '</div><div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div class="bg-bpd-blue h-1.5 rounded-full" style="width: ' + staffPercent + '%"></div></div><p class="text-[9px] font-extrabold text-slate-400 uppercase mt-1">' + staff.closing + ' DEALS / ' + staff.target + ' TARGET</p></div><div class="ml-3 text-right"><p class="text-lg font-black text-emerald-500 leading-none">' + Math.round(staffPercent) + '%</p></div></div>';
+               rank++;
+            });
+            c4.innerHTML = ldbHtml || '<p class="text-[10px] text-center">DATA KOSONG</p>';
+        }
       });
     }
 
-</script>
+    function renderHistoryUI() {
+        const cont = document.getElementById('riwayatContainer'); const filterId = document.getElementById('filterRiwayatStaff').value;
+        const filterProd = document.getElementById('filterRiwayatProduk').value; const search = document.getElementById('filterSearchNasabah').value.toLowerCase().trim();
+        if(!printData.history || printData.history.length === 0) { cont.innerHTML = '<p class="text-center text-xs py-10">TIDAK ADA RIWAYAT</p>'; return; }
+        
+        let grouped = {}; let resultCount = 0; let globalIndex = 0;
+        printData.history.forEach(h => {
+            let pNasabah = (h.nasabah || "").toLowerCase().trim(); let passed = true;
+            if(filterId !== "ALL" && !h.tim.includes(allUsers.find(u => u.id === filterId)?.nama)) passed = false;
+            if(filterProd !== "ALL" && h.produk !== filterProd) passed = false;
+            if(search !== "" && !pNasabah.includes(search)) passed = false;
+            h.originalIndex = globalIndex; globalIndex++;
+            if(passed) { if(!grouped[h.nasabah]) grouped[h.nasabah] = []; grouped[h.nasabah].push(h); resultCount++; }
+        });
+        if (resultCount === 0) { cont.innerHTML = '<p class="text-center text-xs py-10">PENCARIAN TIDAK DITEMUKAN</p>'; return; }
+        
+        let html = ""; let dly = 0;
+        for(let nasabah in grouped) {
+            html += '<div class="bg-white p-4 rounded-3xl card-shadow mb-4 animate-slide-up" style="animation-delay:' + dly + 's"><div class="border-b border-slate-100 pb-2 mb-3 flex items-center justify-between"><p class="text-sm font-black text-slate-800 uppercase"><i class="fa-solid fa-user-circle text-bpd-blue mr-1.5"></i> ' + nasabah + '</p><p class="text-[9px] font-bold text-slate-400">' + grouped[nasabah][0].hp + '</p></div><div class="space-y-2">';
+            grouped[nasabah].forEach(h => {
+                let bc = h.status === "CLOSING" ? "text-emerald-600" : (h.status === "PROSPEK" ? "text-amber-600" : "text-rose-600");
+                html += '<div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 cursor-pointer hover:border-bpd-blue transition-all" onclick="openJourney(' + h.originalIndex + ')"><div class="flex justify-between items-center mb-1.5"><span class="text-[11px] font-extrabold text-bpd-blue uppercase">' + h.produk + '</span><span class="' + bc + ' text-[9px] font-black">' + h.status + '</span></div><p class="text-[9px] font-bold text-slate-500 uppercase"><i class="fa-solid fa-users mr-1 text-slate-400"></i> TIM TERLIBAT: ' + h.tim + '</p></div>';
+            });
+            html += '</div></div>'; dly += 0.05;
+        }
+        cont.innerHTML = html;
+    }
+
+    function cetakPDF() { alert("Fungsi cetak PDF siap dijalankan (menggunakan printData yang sudah dimuat)."); }
+
+    // ==========================================
+    // MENGIKAT EVENT LISTENER SECARA AMAN (PENTING!)
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", () => {
+        // Form Setup
+        let fInput = document.getElementById('formInput'); if(fInput) fInput.addEventListener('submit', async function(e) { e.preventDefault(); const btn = document.getElementById('btnSubmit'); const btnText = document.getElementById('btnText'); const spinner = document.getElementById('btnSpinner'); btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden'); const obj = Object.fromEntries(new FormData(this)); obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; obj.activeId = activeUser.id; obj.activeNama = activeUser.nama; if((obj.metode === 'TATAP MUKA' || obj.metode === 'WHATSAPP') && !compressedImageBase64) { alert("BUKTI FOTO WAJIB DILAMPIRKAN."); btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); return; } obj.fileData = compressedImageBase64; callGAS("submitActivity", obj).then(res => { btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); document.getElementById('formInput').reset(); document.getElementById('areaValidasi').classList.add('hidden'); document.getElementById('nasabahExistingAlert').classList.add('hidden'); cekStatus(); compressedImageBase64 = null; document.getElementById('previewImg').classList.add('hidden'); switchMenu('pipeline'); }).catch(err => { btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); }); });
+        
+        let fUpdate = document.getElementById('formUpdate'); if(fUpdate) fUpdate.addEventListener('submit', function(e) { e.preventDefault(); const btn = document.getElementById('btnUpdateSubmit'); btn.innerText = "PROCESSING..."; btn.disabled = true; let objData = { hpTarget: document.getElementById('modalHpTarget').value, produkTarget: document.getElementById('modalProdukTarget').value, nasabahTarget: document.getElementById('modalNasabahInput').value, statusUpdate: document.getElementById('modalStatus').value, catatanUpdate: document.getElementById('modalCatatan').value, assigneeId: document.getElementById('updateAssignee').value, jadwalFollowUpUpdate: document.getElementById('modalJadwalUpdate').value, lat: latitude, lng: longitude, activeId: activeUser.id, activeNama: activeUser.nama }; callGAS("updatePipelineStatus", objData).then(res => { btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; closeModalUpdate(); refreshDataServer(); }).catch(err => { btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; }); });
+        
+        let fStaff = document.getElementById('formManageStaff'); if(fStaff) fStaff.addEventListener('submit', function(e) { e.preventDefault(); let btn = document.getElementById('btnStaffFormSubmit'); let txt = document.getElementById('txtStaffFormSubmit'); let spin = document.getElementById('spinStaffFormSubmit'); btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); let payload = { id: document.getElementById('staffFormId').value, nama: document.getElementById('staffFormNama').value, akses: document.getElementById('staffFormAkses').value, periode: document.getElementById('staffFormPeriode').value, target: parseInt(document.getElementById('staffFormTarget').value) || 0 }; callGAS("manageUserDb", { crudAction: document.getElementById('staffFormAction').value, payload: payload }).then(res => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeStaffForm(); renderManageStaffUI(); }).catch(err => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); }); });
+        
+        let fProd = document.getElementById('formManageProduct'); if(fProd) fProd.addEventListener('submit', function(e) { e.preventDefault(); let btn = document.getElementById('btnProductFormSubmit'); let txt = document.getElementById('txtProductFormSubmit'); let spin = document.getElementById('spinProductFormSubmit'); btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); let payload = { id: document.getElementById('productFormId').value, nama: document.getElementById('productFormNama').value, kategori: document.getElementById('productFormKategori').value }; callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload }).then(res => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeProductForm(); renderManageProductUI(); }).catch(err => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); }); });
+
+        // Inisiasi Pertama Saat Buka Web
+        requestLocationUpdate();
+        function getLocalIsoString(d) { let z = function(n) { return ('0'+n).slice(-2); }; return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate()); }
+        let date = new Date(); let firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+        if(document.getElementById('filterStart')) document.getElementById('filterStart').value = getLocalIsoString(firstDay); 
+        if(document.getElementById('filterEnd')) document.getElementById('filterEnd').value = getLocalIsoString(date);
+        
+        callGAS("getAppInitData").then(initData => { initGateway(initData); }).catch(err => {
+            let s = document.getElementById('loginUserSelect'); if(s) s.innerHTML = '<option value="">ERROR KONEKSI SERVER (CEK URL GAS)</option>';
+        });
+    });
+  </script>
+</body>
+</html>
