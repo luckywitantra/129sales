@@ -2,7 +2,12 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#004A8D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CRM PRO">
+  <link rel="manifest" href="manifest.json">
   <title>Super App CRM - Bankaltimtara</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,12 +16,12 @@
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
     .bg-bpd-blue { background-color: #004A8D; } 
     .bg-bpd-orange { background-color: #F37021; } 
     .text-bpd-orange { color: #F37021; } 
     .text-bpd-blue { color: #004A8D; }
-    .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border-top: 1px solid rgba(0,0,0,0.05); }
+    .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border-top: 1px solid rgba(0,0,0,0.05); padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem); }
     .card-shadow { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); border: 1px solid rgba(226, 232, 240, 0.8); }
     .input-field { background-color: #F1F5F9; border: 1.5px solid transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-transform: uppercase; }
     .input-field:focus { border-color: #004A8D; background-color: #FFFFFF; outline: none; box-shadow: 0 0 0 4px rgba(0, 74, 141, 0.1); }
@@ -39,6 +44,10 @@
   </style>
 </head>
 <body class="text-slate-800 pb-24 selection:bg-blue-200">
+
+  <div id="offlineAlert" class="hidden fixed top-0 w-full bg-rose-500 text-white text-[10px] font-bold text-center py-2 z-[999] shadow-md uppercase tracking-widest transition-all">
+    <i class="fa-solid fa-wifi mr-1"></i> Mode Offline: Menunggu Koneksi Stabil
+  </div>
 
   <div id="view-gateway" class="fixed inset-0 bg-bpd-blue z-[200] flex flex-col items-center justify-center p-6 animate-fade-in no-print">
      <div class="text-center mb-8">
@@ -263,9 +272,34 @@
   <div id="printArea" class="hidden"></div>
 
   <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby5AKJx3DDe8-CjkeRO9oDqalBOCpdtH3vLLy65kom03jEBhO7lMvx8zpacH0aHWwU/exec"; // Wajib ganti ini
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby5AKJx3DDe8-CjkeRO9oDqalBOCpdtH3vLLy65kom03jEBhO7lMvx8zpacH0aHWwU/exec"; 
+
+    // STATE LOCK (Pencegahan Double Input)
+    let isSubmittingAction = false; 
+
+    // PWA: Registrasi Service Worker & Deteksi Offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+          console.log('Service Worker PWA berhasil didaftarkan.', reg);
+        }).catch(err => {
+          console.warn('Service Worker PWA gagal didaftarkan:', err);
+        });
+      });
+    }
+
+    window.addEventListener('online', () => {
+        document.getElementById('offlineAlert').classList.add('hidden');
+    });
+    window.addEventListener('offline', () => {
+        document.getElementById('offlineAlert').classList.remove('hidden');
+    });
 
     async function callGAS(actionName, dataPayload = {}) {
+      if (!navigator.onLine) {
+         alert("Koneksi terputus. Pastikan internet Anda aktif untuk menyimpan data ke server.");
+         throw new Error("Offline");
+      }
       try {
         const response = await fetch(GAS_API_URL, {
           method: "POST",
@@ -276,7 +310,7 @@
         if (!json.success) throw new Error(json.msg);
         return json.data;
       } catch (error) {
-        alert("Koneksi Server Gagal: " + error.message);
+        alert("Server Error: " + error.message);
         throw error;
       }
     }
@@ -417,11 +451,21 @@
     function closeProductForm() { document.getElementById('modalProductForm').classList.add('hidden'); }
 
     function deleteStaff(id, nama) { 
-        if(confirm("Yakin menghapus staf: " + nama + "?")) { callGAS("manageUserDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { initGateway(res.initData); renderManageStaffUI(); }); } 
+        if(confirm("Yakin menghapus staf: " + nama + "?")) { 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+            callGAS("manageUserDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { 
+                initGateway(res.initData); renderManageStaffUI(); isSubmittingAction = false;
+            }).catch(() => isSubmittingAction = false); 
+        } 
     }
     
     function deleteProduct(id, nama) { 
-        if(confirm("Yakin menghapus produk: " + nama + "?")) { callGAS("manageProductDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { initGateway(res.initData); renderManageProductUI(); }); } 
+        if(confirm("Yakin menghapus produk: " + nama + "?")) { 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+            callGAS("manageProductDb", { crudAction: 'DELETE', payload: {id: id} }).then(res => { 
+                initGateway(res.initData); renderManageProductUI(); isSubmittingAction = false;
+            }).catch(() => isSubmittingAction = false); 
+        } 
     }
 
     function checkNasabahExisting() {
@@ -674,17 +718,92 @@
     function cetakPDF() { alert("Fungsi cetak PDF siap dijalankan (menggunakan printData yang sudah dimuat)."); }
 
     // ==========================================
-    // MENGIKAT EVENT LISTENER SECARA AMAN (PENTING!)
+    // MENGIKAT EVENT LISTENER SECARA AMAN + LOCK DOUBLE INPUT
     // ==========================================
     document.addEventListener("DOMContentLoaded", () => {
-        // Form Setup
-        let fInput = document.getElementById('formInput'); if(fInput) fInput.addEventListener('submit', async function(e) { e.preventDefault(); const btn = document.getElementById('btnSubmit'); const btnText = document.getElementById('btnText'); const spinner = document.getElementById('btnSpinner'); btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden'); const obj = Object.fromEntries(new FormData(this)); obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; obj.activeId = activeUser.id; obj.activeNama = activeUser.nama; if((obj.metode === 'TATAP MUKA' || obj.metode === 'WHATSAPP') && !compressedImageBase64) { alert("BUKTI FOTO WAJIB DILAMPIRKAN."); btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); return; } obj.fileData = compressedImageBase64; callGAS("submitActivity", obj).then(res => { btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); document.getElementById('formInput').reset(); document.getElementById('areaValidasi').classList.add('hidden'); document.getElementById('nasabahExistingAlert').classList.add('hidden'); cekStatus(); compressedImageBase64 = null; document.getElementById('previewImg').classList.add('hidden'); switchMenu('pipeline'); }).catch(err => { btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); }); });
         
-        let fUpdate = document.getElementById('formUpdate'); if(fUpdate) fUpdate.addEventListener('submit', function(e) { e.preventDefault(); const btn = document.getElementById('btnUpdateSubmit'); btn.innerText = "PROCESSING..."; btn.disabled = true; let objData = { hpTarget: document.getElementById('modalHpTarget').value, produkTarget: document.getElementById('modalProdukTarget').value, nasabahTarget: document.getElementById('modalNasabahInput').value, statusUpdate: document.getElementById('modalStatus').value, catatanUpdate: document.getElementById('modalCatatan').value, assigneeId: document.getElementById('updateAssignee').value, jadwalFollowUpUpdate: document.getElementById('modalJadwalUpdate').value, lat: latitude, lng: longitude, activeId: activeUser.id, activeNama: activeUser.nama }; callGAS("updatePipelineStatus", objData).then(res => { btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; closeModalUpdate(); refreshDataServer(); }).catch(err => { btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; }); });
+        let fInput = document.getElementById('formInput'); 
+        if(fInput) fInput.addEventListener('submit', async function(e) { 
+            e.preventDefault(); 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+
+            const btn = document.getElementById('btnSubmit'); const btnText = document.getElementById('btnText'); const spinner = document.getElementById('btnSpinner'); 
+            btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden'); 
+            
+            const obj = Object.fromEntries(new FormData(this)); 
+            obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; obj.activeId = activeUser.id; obj.activeNama = activeUser.nama; 
+            
+            if((obj.metode === 'TATAP MUKA' || obj.metode === 'WHATSAPP') && !compressedImageBase64) { 
+                alert("BUKTI FOTO WAJIB DILAMPIRKAN."); 
+                btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); 
+                isSubmittingAction = false;
+                return; 
+            } 
+            obj.fileData = compressedImageBase64; 
+            
+            callGAS("submitActivity", obj).then(res => { 
+                btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); 
+                document.getElementById('formInput').reset(); document.getElementById('areaValidasi').classList.add('hidden'); document.getElementById('nasabahExistingAlert').classList.add('hidden'); 
+                cekStatus(); compressedImageBase64 = null; document.getElementById('previewImg').classList.add('hidden'); switchMenu('pipeline'); 
+                isSubmittingAction = false;
+            }).catch(err => { 
+                btn.disabled = false; btn.classList.remove('opacity-80'); btnText.innerText = "SIMPAN DATA"; spinner.classList.add('hidden'); 
+                isSubmittingAction = false;
+            }); 
+        });
         
-        let fStaff = document.getElementById('formManageStaff'); if(fStaff) fStaff.addEventListener('submit', function(e) { e.preventDefault(); let btn = document.getElementById('btnStaffFormSubmit'); let txt = document.getElementById('txtStaffFormSubmit'); let spin = document.getElementById('spinStaffFormSubmit'); btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); let payload = { id: document.getElementById('staffFormId').value, nama: document.getElementById('staffFormNama').value, akses: document.getElementById('staffFormAkses').value, periode: document.getElementById('staffFormPeriode').value, target: parseInt(document.getElementById('staffFormTarget').value) || 0 }; callGAS("manageUserDb", { crudAction: document.getElementById('staffFormAction').value, payload: payload }).then(res => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeStaffForm(); renderManageStaffUI(); }).catch(err => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); }); });
+        let fUpdate = document.getElementById('formUpdate'); 
+        if(fUpdate) fUpdate.addEventListener('submit', function(e) { 
+            e.preventDefault(); 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+
+            const btn = document.getElementById('btnUpdateSubmit'); btn.innerText = "PROCESSING..."; btn.disabled = true; 
+            let objData = { hpTarget: document.getElementById('modalHpTarget').value, produkTarget: document.getElementById('modalProdukTarget').value, nasabahTarget: document.getElementById('modalNasabahInput').value, statusUpdate: document.getElementById('modalStatus').value, catatanUpdate: document.getElementById('modalCatatan').value, assigneeId: document.getElementById('updateAssignee').value, jadwalFollowUpUpdate: document.getElementById('modalJadwalUpdate').value, lat: latitude, lng: longitude, activeId: activeUser.id, activeNama: activeUser.nama }; 
+            
+            callGAS("updatePipelineStatus", objData).then(res => { 
+                btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; closeModalUpdate(); refreshDataServer(); 
+                isSubmittingAction = false;
+            }).catch(err => { 
+                btn.innerText = "SIMPAN UPDATE"; btn.disabled = false; 
+                isSubmittingAction = false;
+            }); 
+        });
         
-        let fProd = document.getElementById('formManageProduct'); if(fProd) fProd.addEventListener('submit', function(e) { e.preventDefault(); let btn = document.getElementById('btnProductFormSubmit'); let txt = document.getElementById('txtProductFormSubmit'); let spin = document.getElementById('spinProductFormSubmit'); btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); let payload = { id: document.getElementById('productFormId').value, nama: document.getElementById('productFormNama').value, kategori: document.getElementById('productFormKategori').value }; callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload }).then(res => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeProductForm(); renderManageProductUI(); }).catch(err => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); }); });
+        let fStaff = document.getElementById('formManageStaff'); 
+        if(fStaff) fStaff.addEventListener('submit', function(e) { 
+            e.preventDefault(); 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+
+            let btn = document.getElementById('btnStaffFormSubmit'); let txt = document.getElementById('txtStaffFormSubmit'); let spin = document.getElementById('spinStaffFormSubmit'); 
+            btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); 
+            let payload = { id: document.getElementById('staffFormId').value, nama: document.getElementById('staffFormNama').value, akses: document.getElementById('staffFormAkses').value, periode: document.getElementById('staffFormPeriode').value, target: parseInt(document.getElementById('staffFormTarget').value) || 0 }; 
+            
+            callGAS("manageUserDb", { crudAction: document.getElementById('staffFormAction').value, payload: payload }).then(res => { 
+                btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeStaffForm(); renderManageStaffUI(); 
+                isSubmittingAction = false;
+            }).catch(err => { 
+                btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); 
+                isSubmittingAction = false;
+            }); 
+        });
+        
+        let fProd = document.getElementById('formManageProduct'); 
+        if(fProd) fProd.addEventListener('submit', function(e) { 
+            e.preventDefault(); 
+            if(isSubmittingAction) return; isSubmittingAction = true;
+
+            let btn = document.getElementById('btnProductFormSubmit'); let txt = document.getElementById('txtProductFormSubmit'); let spin = document.getElementById('spinProductFormSubmit'); 
+            btn.disabled = true; txt.innerText = "MENYIMPAN..."; spin.classList.remove('hidden'); 
+            let payload = { id: document.getElementById('productFormId').value, nama: document.getElementById('productFormNama').value, kategori: document.getElementById('productFormKategori').value }; 
+            
+            callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload }).then(res => { 
+                btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeProductForm(); renderManageProductUI(); 
+                isSubmittingAction = false;
+            }).catch(err => { 
+                btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); 
+                isSubmittingAction = false;
+            }); 
+        });
 
         // Inisiasi Pertama Saat Buka Web
         requestLocationUpdate();
@@ -694,7 +813,7 @@
         if(document.getElementById('filterEnd')) document.getElementById('filterEnd').value = getLocalIsoString(date);
         
         callGAS("getAppInitData").then(initData => { initGateway(initData); }).catch(err => {
-            let s = document.getElementById('loginUserSelect'); if(s) s.innerHTML = '<option value="">ERROR KONEKSI SERVER (CEK URL GAS)</option>';
+            let s = document.getElementById('loginUserSelect'); if(s) s.innerHTML = '<option value="">ERROR KONEKSI SERVER</option>';
         });
     });
   </script>
