@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crm-pro-v2'; // Ganti versi ini (v3, v4) setiap kali Anda merubah index.html
+const CACHE_NAME = 'crm-pro-v3'; // Ganti versi ini (v3, v4) setiap kali Anda merubah index.html
 
 // Hanya hardcode file lokal Anda sendiri di sini
 const LOCAL_ASSETS = [
