@@ -33,7 +33,25 @@
     .admin-tab { padding: 12px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #94A3B8; background: transparent; transition: all 0.3s; border-radius: 12px; }
     .admin-tab.active { background: #004A8D; color: white; box-shadow: 0 4px 10px rgba(0,74,141,0.2); }
     .pulse-red { animation: pulseRed 2s infinite; } @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-    @media print { body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; } #printArea { position: absolute; left: 0; top: 0; width: 100%; background: #ffffff; padding: 15px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; } .no-print { display: none !important; } }
+    
+    /* CSS SUPER UNTUK CETAK PDF */
+    @media print { 
+        body * { visibility: hidden; } 
+        #printArea, #printArea * { visibility: visible; } 
+        #printArea { position: absolute; left: 0; top: 0; width: 100%; background: #ffffff !important; padding: 20px; font-family: 'Plus Jakarta Sans', sans-serif; color: #1e293b; } 
+        .no-print { display: none !important; } 
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .print-badge-closing { background: #d1fae5 !important; color: #047857 !important; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; display: inline-block; }
+        .print-badge-prospek { background: #fef3c7 !important; color: #b45309 !important; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; display: inline-block; }
+        .print-badge-ditolak { background: #ffe4e6 !important; color: #be123c !important; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; display: inline-block; }
+        .print-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+        .print-table th { background: #004A8D !important; color: #ffffff !important; padding: 10px; text-align: left; border: 1px solid #004A8D; }
+        .print-table td { border: 1px solid #cbd5e1; padding: 10px; vertical-align: top; }
+        .print-table tr:nth-child(even) { background-color: #f8fafc !important; }
+        .print-log { border-left: 2px solid #94a3b8; padding-left: 8px; margin-bottom: 8px; }
+        .print-header { border-bottom: 3px solid #004A8D; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        @page { size: A4 portrait; margin: 1.5cm; }
+    }
   </style>
 </head>
 <body class="text-slate-800 pb-24 selection:bg-blue-200">
@@ -306,7 +324,6 @@
     let optDelegasiNoSelf = "";
     let deferredPrompt = null;
 
-    // DETEKSI INSTALASI PWA LINTAS PLATFORM
     document.addEventListener('DOMContentLoaded', () => {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         
@@ -315,10 +332,8 @@
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
 
             if (isIos && isSafari) {
-                // Tampilkan popup instruksi iOS khusus
                 setTimeout(() => { document.getElementById('iosInstallModal').classList.remove('hidden'); }, 3000);
             } else {
-                // Siapkan event untuk Android / PC (Chrome, Edge, dll)
                 window.addEventListener('beforeinstallprompt', (e) => {
                     e.preventDefault(); deferredPrompt = e;
                     setTimeout(() => { document.getElementById('installPromptModal').classList.remove('hidden'); }, 3000);
@@ -338,7 +353,6 @@
 
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => console.warn(err)); }); }
 
-    // OFFLINE SYNC BACKGROUND LOGIC
     async function syncOfflineData() {
         let queue = JSON.parse(localStorage.getItem('crm_offline_queue') || '[]');
         if(queue.length === 0) return;
@@ -378,7 +392,6 @@
           const mutasi = ["submitActivity", "updatePipelineStatus", "manageUserDb", "manageProductDb"];
           if(mutasi.includes(actionName)) {
               let q = JSON.parse(localStorage.getItem('crm_offline_queue') || '[]');
-              // Cegah quota exceeded LocalStorage (hapus foto asli jika offline murni)
               if(dataPayload.fileData && dataPayload.fileData.length > 500000) dataPayload.fileData = "OFFLINE_CACHE"; 
               q.push({ action: actionName, data: dataPayload, time: Date.now() });
               localStorage.setItem('crm_offline_queue', JSON.stringify(q));
@@ -523,10 +536,7 @@
     }
 
     function cekJenis() {
-        const j = document.getElementById('inputJenis').value;
-        const statusEl = document.getElementById('statusInput');
-        const assigneeEl = document.getElementById('inputAssignee');
-        
+        const j = document.getElementById('inputJenis').value; const statusEl = document.getElementById('statusInput'); const assigneeEl = document.getElementById('inputAssignee');
         if (j === 'UPSELLING') {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
             statusEl.value = 'CLOSING'; assigneeEl.innerHTML = optDelegasiFull; assigneeEl.value = 'SELF'; cekStatus(); 
@@ -540,22 +550,12 @@
     }
 
     function cekStatus() {
-        const j = document.getElementById('inputJenis').value;
-        const s = document.getElementById('statusInput').value; 
-        const hpInput = document.getElementById('inputNoHp'); 
-        const wrapFollowUp = document.getElementById('wrapFollowUp'); 
-        const wrapDelegasi = document.getElementById('wrapDelegasi');
-        const assigneeEl = document.getElementById('inputAssignee');
-
+        const j = document.getElementById('inputJenis').value; const s = document.getElementById('statusInput').value; const hpInput = document.getElementById('inputNoHp'); const wrapFollowUp = document.getElementById('wrapFollowUp'); const wrapDelegasi = document.getElementById('wrapDelegasi'); const assigneeEl = document.getElementById('inputAssignee');
         if(s === "PROSPEK") { 
-            wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden'); 
-            hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
+            wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden'); hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
             if(j === "CROSS SELLING") { assigneeEl.required = true; } else { assigneeEl.required = false; }
         } else { 
-            wrapDelegasi.classList.add('hidden'); wrapFollowUp.classList.add('hidden'); 
-            assigneeEl.value = "SELF"; assigneeEl.required = false;
-            document.getElementById('inputJadwalFollowUp').value = ""; 
-            hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)"; 
+            wrapDelegasi.classList.add('hidden'); wrapFollowUp.classList.add('hidden'); assigneeEl.value = "SELF"; assigneeEl.required = false; document.getElementById('inputJadwalFollowUp').value = ""; hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)"; 
         }
     }
 
@@ -593,7 +593,6 @@
 
     function openKpiDetail(type) {
         let title = ""; let rawList = [];
-        
         if (type === 'TOTAL') { title = "TOTAL NASABAH KELOLAAN RELEVAN"; rawList = printData.history; } 
         else if (type === 'LOST') { title = "DETAIL LOST LEADS"; rawList = printData.history.filter(h => h.statusAkhir === 'DITOLAK'); }
         else { title = "DETAIL STRATEGI: " + type; rawList = printData.history.filter(h => h.logs.some(log => log.jenis === type)); }
@@ -630,7 +629,6 @@
         });
         document.getElementById('journeyTimeline').innerHTML = timelineHtml; document.getElementById('modalJourney').classList.remove('hidden');
     }
-    
     function closeJourney() { document.getElementById('modalJourney').classList.add('hidden'); }
 
     function openStaffStats(idUser) {
@@ -648,17 +646,14 @@
         else { staff.produkList.forEach(p => { htmlProd += '<div class="mb-4 animate-slide-up"><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1.5 uppercase"><span>' + p.nama + ' (' + p.count + ' NSB)</span><span class="text-bpd-blue font-black">' + p.perc + '%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-bpd-blue h-2 rounded-full" style="width: ' + p.perc + '%"></div></div></div>'; }); }
         document.getElementById('statStaffProducts').innerHTML = htmlProd; document.getElementById('modalStaffStats').classList.remove('hidden');
     }
-    
     function closeStaffStats() { document.getElementById('modalStaffStats').classList.add('hidden'); }
     function closeModalUpdate() { document.getElementById('modalUpdate').classList.add('hidden'); }
 
     function refreshDataServer() {
       if(!navigator.onLine) return; 
       let startD = document.getElementById('filterStart').value; let endD = document.getElementById('filterEnd').value;
-      const c1 = document.getElementById('pipeContentAktif'); const c2 = document.getElementById('pipeContentTunggu');
-      const c3 = document.getElementById('riwayatContainer'); const c4 = document.getElementById('leaderboardContainer');
+      const c1 = document.getElementById('pipeContentAktif'); const c2 = document.getElementById('pipeContentTunggu'); const c3 = document.getElementById('riwayatContainer'); const c4 = document.getElementById('leaderboardContainer');
       const l = '<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-bpd-blue text-3xl"></i></div>';
-      
       c1.innerHTML=l; c2.innerHTML=l; c3.innerHTML=l; if(activeUser.role==="ADMIN") c4.innerHTML=l;
       
       callGAS("getDashboardData", { userId: activeUser.id, userAkses: activeUser.role, startStr: startD, endStr: endD })
@@ -668,20 +663,14 @@
 
         const s = data.stats;
         document.getElementById('kpiClosing').innerText = s.closing; document.getElementById('kpiTarget').innerText = s.target; document.getElementById('kpiPeriode').innerText = s.periodeTarget; 
-        
-        let countCS = 0, countUP = 0;
-        data.history.forEach(h => {
-            if(h.logs.some(l => l.jenis === 'CROSS SELLING')) countCS++;
-            if(h.logs.some(l => l.jenis === 'UPSELLING')) countUP++;
-        });
+        let countCS = 0, countUP = 0; data.history.forEach(h => { if(h.logs.some(l => l.jenis === 'CROSS SELLING')) countCS++; if(h.logs.some(l => l.jenis === 'UPSELLING')) countUP++; });
         document.getElementById('kpiCS').innerText = countCS; document.getElementById('kpiUP').innerText = countUP;
 
         let totalUniqueNasabah = Object.keys(data.history.reduce((acc, obj) => { acc[obj.nasabah] = true; return acc; }, {})).length;
         document.getElementById('statTotal').innerText = totalUniqueNasabah; document.getElementById('statLost').innerText = s.ditolak;
         
         let percentage = s.target === 0 ? 0 : (s.closing / s.target) * 100; if(percentage > 100) percentage = 100;
-        setTimeout(() => { document.getElementById('kpiProgress').style.width = percentage + "%"; }, 100);
-        document.getElementById('kpiPercentage').innerText = percentage.toFixed(0) + "%";
+        setTimeout(() => { document.getElementById('kpiProgress').style.width = percentage + "%"; }, 100); document.getElementById('kpiPercentage').innerText = percentage.toFixed(0) + "%";
 
         if(document.getElementById('trendChart')) {
             let ctx = document.getElementById('trendChart'); if(myChart) { myChart.destroy(); }
@@ -716,7 +705,6 @@
                let staffPercent = staff.target === 0 ? 0 : (staff.closing / staff.target) * 100; let badgeHtml = "";
                if(staff.badges && staff.badges.length > 0) { staff.badges.forEach(b => { badgeHtml += '<span class="text-[8px] ' + b.class + ' px-1.5 py-0.5 rounded font-bold mr-1"><i class="fa-solid ' + b.icon + '"></i> ' + b.text + '</span>'; }); }
                let rankBadge = rank === 1 ? 'bg-amber-100 text-bpd-orange' : (rank === 2 ? 'bg-slate-200 text-slate-600' : 'bg-orange-100 text-orange-600'); if(rank > 3) rankBadge = 'bg-slate-50 text-slate-400';
-               
                ldbHtml += '<div class="bg-white p-4 rounded-3xl card-shadow flex items-center cursor-pointer hover:border-bpd-blue border border-transparent transition-all animate-slide-up" onclick="openStaffStats(\'' + staff.id + '\')"><div class="' + rankBadge + ' w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-sm shrink-0 mr-3">#' + rank + '</div><div class="flex-1"><p class="text-xs font-black text-slate-800 uppercase mb-0.5">' + staff.nama + '</p><div class="mb-1.5">' + badgeHtml + '</div><div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div class="bg-bpd-blue h-1.5 rounded-full" style="width: ' + staffPercent + '%"></div></div><p class="text-[10px] font-black text-slate-500 uppercase mt-1">⭐ ' + staff.poin + ' POIN <span class="font-bold text-[9px] ml-1 text-slate-400">| ' + staff.closing + ' DEALS</span> <span class="ml-2 text-[9px] text-indigo-400 font-extrabold">CS:' + staff.jenisMap['CROSS SELLING'] + ' UP:' + staff.jenisMap['UPSELLING'] + '</span></p></div><div class="ml-3 text-right"><p class="text-lg font-black text-emerald-500 leading-none">' + Math.round(staffPercent) + '%</p></div></div>'; rank++;
             });
             c4.innerHTML = ldbHtml || '<p class="text-[10px] text-center">DATA KOSONG</p>';
@@ -754,7 +742,130 @@
         cont.innerHTML = html;
     }
 
-    function cetakPDF() { alert("Fungsi cetak PDF siap dijalankan (menggunakan printData yang sudah dimuat)."); }
+    // FUNGSI SUPER CETAK PDF DENGAN FILTER AKTIF
+    function cetakPDF() { 
+        if(!printData.history || printData.history.length === 0) { alert("Tidak ada data untuk dicetak."); return; }
+        
+        const filterId = document.getElementById('filterRiwayatStaff').value; 
+        const filterProd = document.getElementById('filterRiwayatProduk').value; 
+        const filterStatus = document.getElementById('filterRiwayatStatus').value; 
+        const filterJenis = document.getElementById('filterRiwayatJenis').value; 
+        const search = document.getElementById('filterSearchNasabah').value.toLowerCase().trim();
+
+        // Nama Filter untuk Header Laporan
+        let txtStaf = filterId === "ALL" ? "SEMUA STAF" : (allUsers.find(u => u.id === filterId)?.nama || "SEMUA STAF");
+        let dateFilter = document.getElementById('filterStart').value + " s/d " + document.getElementById('filterEnd').value;
+
+        // Ambil Data Sesuai Filter
+        let filteredData = [];
+        let statClosing = 0, statProspek = 0, statDitolak = 0;
+
+        printData.history.forEach(h => {
+            let pNasabah = (h.nasabah || "").toLowerCase().trim(); let passed = true;
+            if(filterId !== "ALL" && !h.tim.includes(txtStaf)) passed = false;
+            if(filterProd !== "ALL" && h.produk !== filterProd) passed = false;
+            if(filterStatus !== "ALL" && h.statusAkhir !== filterStatus) passed = false;
+            if(filterJenis !== "ALL") { let hasJenis = h.logs.some(log => log.jenis === filterJenis); if(!hasJenis) passed = false; }
+            if(search !== "" && !pNasabah.includes(search)) passed = false;
+            
+            if(passed) {
+                filteredData.push(h);
+                if(h.statusAkhir === "CLOSING") statClosing++;
+                else if(h.statusAkhir === "PROSPEK") statProspek++;
+                else statDitolak++;
+            }
+        });
+
+        if(filteredData.length === 0) { alert("Tidak ada riwayat nasabah yang sesuai dengan filter pencarian Anda saat ini."); return; }
+
+        let htmlStr = `
+        <div class="print-header">
+            <div>
+                <h1 style="font-size:24px; font-weight:900; margin:0; letter-spacing:-1px;">CRM<span style="color:#F37021;">PRO</span></h1>
+                <p style="font-size:10px; font-weight:bold; color:#64748b; letter-spacing:2px; margin:2px 0 0 0;">BANKALTIMTARA</p>
+                <h2 style="font-size:14px; font-weight:800; margin:15px 0 5px 0;">LAPORAN RIWAYAT INTERAKSI NASABAH</h2>
+                <p style="font-size:10px; color:#475569; margin:0;"><b>Periode:</b> ${dateFilter}</p>
+            </div>
+            <div style="text-align:right; font-size:10px;">
+                <p style="margin:0 0 4px 0;"><b>Dicetak Oleh:</b> ${activeUser.nama}</p>
+                <p style="margin:0;"><b>Waktu Cetak:</b> ${new Date().toLocaleString('id-ID')}</p>
+            </div>
+        </div>
+
+        <div style="background:#f1f5f9; padding:12px; border-radius:8px; margin-bottom:15px; font-size:10px;">
+            <span style="font-weight:bold; color:#004A8D;">PARAMETER FILTER:</span><br>
+            STAF: <b>${txtStaf}</b> &nbsp;|&nbsp; 
+            PRODUK: <b>${filterProd === "ALL" ? "SEMUA PRODUK" : filterProd}</b> &nbsp;|&nbsp; 
+            STATUS: <b>${filterStatus === "ALL" ? "SEMUA STATUS" : filterStatus}</b> &nbsp;|&nbsp; 
+            STRATEGI: <b>${filterJenis === "ALL" ? "SEMUA STRATEGI" : filterJenis}</b>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <div style="flex:1; border:1px solid #cbd5e1; padding:10px; margin-right:10px; text-align:center; border-radius:6px;">
+                <div style="font-size:9px; color:#64748b; font-weight:bold;">TOTAL NASABAH</div>
+                <div style="font-size:18px; font-weight:900; color:#0f172a;">${filteredData.length}</div>
+            </div>
+            <div style="flex:1; border:1px solid #cbd5e1; padding:10px; margin-right:10px; text-align:center; border-radius:6px; background:#f0fdf4;">
+                <div style="font-size:9px; color:#047857; font-weight:bold;">TOTAL CLOSING</div>
+                <div style="font-size:18px; font-weight:900; color:#064e3b;">${statClosing}</div>
+            </div>
+            <div style="flex:1; border:1px solid #cbd5e1; padding:10px; margin-right:10px; text-align:center; border-radius:6px; background:#fffbeb;">
+                <div style="font-size:9px; color:#b45309; font-weight:bold;">TOTAL PROSPEK</div>
+                <div style="font-size:18px; font-weight:900; color:#92400e;">${statProspek}</div>
+            </div>
+            <div style="flex:1; border:1px solid #cbd5e1; padding:10px; text-align:center; border-radius:6px; background:#fff1f2;">
+                <div style="font-size:9px; color:#be123c; font-weight:bold;">TOTAL DITOLAK</div>
+                <div style="font-size:18px; font-weight:900; color:#9f1239;">${statDitolak}</div>
+            </div>
+        </div>
+
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th style="width:25%;">NASABAH & KONTAK</th>
+                    <th style="width:25%;">PRODUK & STATUS</th>
+                    <th style="width:50%;">JEJAK INTERAKSI</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        filteredData.forEach(h => {
+            let statusBadge = h.statusAkhir === "CLOSING" ? "print-badge-closing" : (h.statusAkhir === "PROSPEK" ? "print-badge-prospek" : "print-badge-ditolak");
+            
+            let logsHtml = "";
+            h.logs.forEach(log => {
+               logsHtml += `
+               <div class="print-log">
+                 <div style="font-weight:900; color:#004A8D; font-size:10px;">${log.aktor} <span style="background:#e2e8f0; color:#475569; padding:2px 4px; border-radius:3px; font-size:8px; margin-left:4px;">${log.jenis}</span></div>
+                 <div style="font-size:9px; color:#64748b; margin-top:2px;">${log.waktu}</div>
+                 <div style="font-size:10px; color:#334155; margin-top:3px; font-weight:500;">${log.catatan}</div>
+               </div>`;
+            });
+
+            htmlStr += `
+            <tr>
+               <td>
+                   <div style="font-weight:900; font-size:12px; color:#0f172a;">${h.nasabah}</div>
+                   <div style="font-size:10px; color:#64748b; margin-top:2px;">${h.hp}</div>
+                   <div style="font-size:9px; color:#94a3b8; margin-top:6px; font-weight:bold;">TIM: ${h.tim}</div>
+               </td>
+               <td>
+                   <div style="font-weight:800; font-size:11px; margin-bottom:6px;">${h.produk}</div>
+                   <span class="${statusBadge}">${h.statusAkhir}</span>
+               </td>
+               <td>${logsHtml}</td>
+            </tr>`;
+        });
+
+        htmlStr += `</tbody></table>`;
+        
+        let printArea = document.getElementById('printArea');
+        printArea.innerHTML = htmlStr;
+        
+        // Sengaja berikan sedikit waktu bagi browser merender HTML ke DOM sebelum Print dialog muncul
+        setTimeout(() => { window.print(); }, 300);
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
         let fInput = document.getElementById('formInput'); 
