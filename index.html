@@ -52,6 +52,23 @@
      </div>
   </div>
 
+  <div id="modalInfoStrategi" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4 animate-fade-in no-print">
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative">
+          <button type="button" onclick="document.getElementById('modalInfoStrategi').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center hover:bg-slate-200 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+          <h3 class="font-extrabold text-slate-800 text-base uppercase mb-4 tracking-wide"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> PANDUAN STRATEGI</h3>
+          <div class="space-y-4 text-xs text-slate-600 font-medium">
+              <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
+                  <p class="font-black text-blue-700 uppercase tracking-widest mb-1">UPSELLING</p>
+                  <p class="leading-relaxed text-blue-900">Menawarkan produk yang <b>SESUAI</b> dengan jobdesk/role Anda.<br><br><b>Contoh:</b><br>• <b>Teller:</b> Upgrade saldo tabungan.<br>• <b>CS:</b> Upgrade deposito & tabungan.</p>
+              </div>
+              <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                  <p class="font-black text-indigo-700 uppercase tracking-widest mb-1">CROSS SELLING</p>
+                  <p class="leading-relaxed text-indigo-900">Menawarkan produk yang <b>DI LUAR</b> jobdesk/role Anda (Wajib dioper ke rekan).<br><br><b>Contoh:</b><br>• <b>Teller:</b> Menawarkan buka tabungan baru, kredit.<br>• <b>CS:</b> Menawarkan tambah saldo teller, kredit.</p>
+              </div>
+          </div>
+      </div>
+  </div>
+
   <div id="modalKpiDetail" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[130] flex items-center justify-center p-4 animate-fade-in no-print">
       <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl flex flex-col max-h-[90vh]">
          <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
@@ -158,7 +175,15 @@
               <input type="tel" id="inputNoHp" name="noHp" placeholder="NOMOR WHATSAPP (OPSIONAL)" autocomplete="off" class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-700 uppercase">
               <div class="grid grid-cols-2 gap-3">
                 <select name="produk" id="inputProdukSelect" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="">PRODUK...</option></select>
-                <select name="jenis" id="inputJenis" onchange="cekJenis()" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="">STRATEGI...</option><option value="AKUISISI BARU">AKUISISI BARU</option><option value="CROSS SELLING">CROSS SELLING</option><option value="UPSELLING">UPSELLING</option></select>
+                <div>
+                   <div class="flex items-center justify-between mb-1 pl-1">
+                      <label class="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest block">STRATEGI</label>
+                      <button type="button" onclick="document.getElementById('modalInfoStrategi').classList.remove('hidden')" class="text-blue-500 text-[10px] hover:text-blue-700"><i class="fa-solid fa-circle-question"></i> INFO</button>
+                   </div>
+                   <select name="jenis" id="inputJenis" onchange="cekJenis()" required class="input-field w-full p-3.5 rounded-xl text-sm font-semibold text-slate-600 uppercase" style="margin-top: 2px;">
+                       <option value="">PILIH...</option><option value="CROSS SELLING">CROSS SELLING</option><option value="UPSELLING">UPSELLING</option>
+                   </select>
+                </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
                  <select name="metode" id="metode" onchange="cekMetode()" required class="input-field w-full p-4 rounded-2xl text-sm font-semibold text-slate-600 uppercase"><option value="">METODE...</option><option value="TATAP MUKA">TATAP MUKA</option><option value="TELEPON">TELEPON</option><option value="WHATSAPP">WHATSAPP</option></select>
@@ -202,10 +227,9 @@
             <div onclick="openKpiDetail('LOST')" class="bg-white p-4 rounded-3xl card-shadow text-center border-b-4 border-rose-500 cursor-pointer hover:-translate-y-1 transition-all"><div class="w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-xmark text-sm"></i></div><p class="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">LOST LEADS</p><h3 id="statLost" class="text-xl font-black text-rose-500">0</h3></div>
           </div>
           
-          <div class="grid grid-cols-3 gap-2 mt-2 mb-4">
-            <div onclick="openKpiDetail('CROSS SELLING')" class="bg-indigo-50 p-3 rounded-2xl text-center border border-indigo-100 shadow-sm cursor-pointer hover:-translate-y-1 transition-all"><p class="text-[8px] font-extrabold text-indigo-500 uppercase tracking-widest mb-1">CROSS SELL</p><h3 id="kpiCS" class="text-xl font-black text-indigo-700">0</h3></div>
-            <div onclick="openKpiDetail('UPSELLING')" class="bg-blue-50 p-3 rounded-2xl text-center border border-blue-100 shadow-sm cursor-pointer hover:-translate-y-1 transition-all"><p class="text-[8px] font-extrabold text-blue-500 uppercase tracking-widest mb-1">UP SELLING</p><h3 id="kpiUP" class="text-xl font-black text-blue-700">0</h3></div>
-            <div onclick="openKpiDetail('AKUISISI BARU')" class="bg-emerald-50 p-3 rounded-2xl text-center border border-emerald-100 shadow-sm cursor-pointer hover:-translate-y-1 transition-all"><p class="text-[8px] font-extrabold text-emerald-500 uppercase tracking-widest mb-1">AKUISISI</p><h3 id="kpiAK" class="text-xl font-black text-emerald-700">0</h3></div>
+          <div class="grid grid-cols-2 gap-4 mt-2 mb-4">
+            <div onclick="openKpiDetail('CROSS SELLING')" class="bg-indigo-50 p-4 rounded-3xl text-center border border-indigo-100 shadow-sm cursor-pointer hover:-translate-y-1 transition-all"><p class="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest mb-1">KARYA CROSS SELL</p><h3 id="kpiCS" class="text-3xl font-black text-indigo-700">0</h3></div>
+            <div onclick="openKpiDetail('UPSELLING')" class="bg-blue-50 p-4 rounded-3xl text-center border border-blue-100 shadow-sm cursor-pointer hover:-translate-y-1 transition-all"><p class="text-[10px] font-extrabold text-blue-500 uppercase tracking-widest mb-1">KARYA UP SELLING</p><h3 id="kpiUP" class="text-3xl font-black text-blue-700">0</h3></div>
           </div>
 
           <div class="bg-white p-5 rounded-3xl card-shadow mb-6">
@@ -213,7 +237,7 @@
               <div class="w-full h-40"><canvas id="trendChart"></canvas></div>
           </div>
           <div id="leaderboardSection" class="hidden mt-6 pb-4">
-             <h3 class="font-extrabold text-bpd-blue mb-3 text-sm uppercase tracking-wider flex items-center"><i class="fa-solid fa-ranking-star text-bpd-orange mr-2 text-lg"></i> PERINGKAT TIM</h3>
+             <h3 class="font-extrabold text-bpd-blue mb-3 text-sm uppercase tracking-wider flex items-center"><i class="fa-solid fa-ranking-star text-bpd-orange mr-2 text-lg"></i> PERINGKAT TIM (BOBOT POIN)</h3>
              <div id="leaderboardContainer" class="space-y-3"></div>
           </div>
         </section>
@@ -225,7 +249,7 @@
                  <select id="filterRiwayatStaff" onchange="renderHistoryUI()" class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[9px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"></select>
                  <select id="filterRiwayatProduk" onchange="renderHistoryUI()" class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[9px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"><option value="ALL">SEMUA PRODUK</option></select>
                  <select id="filterRiwayatStatus" onchange="renderHistoryUI()" class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[9px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"><option value="ALL">SEMUA STATUS</option><option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option></select>
-                 <select id="filterRiwayatJenis" onchange="renderHistoryUI()" class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[9px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"><option value="ALL">SEMUA STRATEGI</option><option value="AKUISISI BARU">AKUISISI BARU</option><option value="CROSS SELLING">CROSS SELLING</option><option value="UPSELLING">UPSELLING</option></select>
+                 <select id="filterRiwayatJenis" onchange="renderHistoryUI()" class="bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 text-[9px] font-bold text-slate-600 outline-none focus:border-bpd-blue uppercase"><option value="ALL">SEMUA STRATEGI</option><option value="CROSS SELLING">CROSS SELLING</option><option value="UPSELLING">UPSELLING</option></select>
              </div>
           </div>
           <div id="riwayatContainer" class="space-y-4 pb-4"></div>
@@ -246,6 +270,8 @@
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzzzBrxR0j3fJJHhGU4E1s1iqBljHvzUEk5mUtdEcmnrcNxDOEqOvQiuL9B_jlTgWWa/exec"; 
 
     let isSubmittingAction = false; 
+    let optDelegasiFull = "";
+    let optDelegasiNoSelf = "";
 
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => console.warn(err)); }); }
     window.addEventListener('online', () => { document.getElementById('offlineAlert').classList.add('hidden'); });
@@ -273,10 +299,16 @@
        allUsers.forEach(u => { opts += '<option value="' + u.id + '|' + u.akses + '|' + u.nama + '">' + u.nama + ' (' + u.akses + ')</option>'; });
        sel.innerHTML = opts || '<option value="">TIDAK ADA DATA STAF</option>';
 
-       let optDelegasi = '<option value="SELF">👤 KERJAKAN SENDIRI</option>';
-       allUsers.forEach(u => { if(u.akses === "USER") optDelegasi += '<option value="' + u.id + '|' + u.nama + '">🤝 OPER KE: ' + u.nama + '</option>'; });
-       document.getElementById('inputAssignee').innerHTML = optDelegasi;
-       document.getElementById('updateAssignee').innerHTML = '<option value="NO_CHANGE">TAHAN DI SAYA</option>' + optDelegasi.replace('<option value="SELF">👤 KERJAKAN SENDIRI</option>', '');
+       optDelegasiFull = '<option value="SELF">👤 KERJAKAN SENDIRI</option>';
+       optDelegasiNoSelf = '<option value="">-- PILIH REKAN --</option>';
+       allUsers.forEach(u => { 
+           if(u.akses === "USER") {
+               let str = '<option value="' + u.id + '|' + u.nama + '">🤝 OPER KE: ' + u.nama + '</option>';
+               optDelegasiFull += str; optDelegasiNoSelf += str;
+           }
+       });
+       document.getElementById('inputAssignee').innerHTML = optDelegasiFull;
+       document.getElementById('updateAssignee').innerHTML = '<option value="NO_CHANGE">TAHAN DI SAYA</option>' + optDelegasiNoSelf.replace('<option value="">-- PILIH REKAN --</option>', '');
 
        let optProdInput = '<option value="">-- PILIH PRODUK --</option>'; let optProdFilter = '<option value="ALL">SEMUA PRODUK</option>';
        allProducts.forEach(p => { optProdInput += '<option value="' + p.nama + '">' + p.nama + '</option>'; optProdFilter += '<option value="' + p.nama + '">' + p.nama + '</option>'; });
@@ -381,30 +413,50 @@
         } else { document.getElementById('nasabahExistingAlert').classList.add('hidden'); }
     }
 
+    // FUNGSI AUTOMATION UPSELLING / CROSS SELLING
     function cekJenis() {
         const j = document.getElementById('inputJenis').value;
         const statusEl = document.getElementById('statusInput');
         const assigneeEl = document.getElementById('inputAssignee');
         
-        if (j === 'AKUISISI BARU' || j === 'UPSELLING') {
-            statusEl.innerHTML = '<option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
-            statusEl.value = 'CLOSING'; assigneeEl.value = 'SELF'; cekStatus(); 
+        if (j === 'UPSELLING') {
+            statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
+            statusEl.value = 'CLOSING'; 
+            assigneeEl.innerHTML = optDelegasiFull;
+            assigneeEl.value = 'SELF'; 
+            cekStatus(); 
         } else if (j === 'CROSS SELLING') {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option>';
             statusEl.value = 'PROSPEK';
-            if(assigneeEl.options.length > 1) {
-                for(let i=0; i<assigneeEl.options.length; i++) { if(assigneeEl.options[i].value !== "SELF") { assigneeEl.selectedIndex = i; break; } }
-            }
+            assigneeEl.innerHTML = optDelegasiNoSelf; // Hapus diri sendiri
             cekStatus();
         } else {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
+            assigneeEl.innerHTML = optDelegasiFull;
         }
     }
 
     function cekStatus() {
-        const s = document.getElementById('statusInput').value; const hpInput = document.getElementById('inputNoHp'); const wrapFollowUp = document.getElementById('wrapFollowUp'); const wrapDelegasi = document.getElementById('wrapDelegasi');
-        if(s === "PROSPEK") { wrapDelegasi.classList.remove('hidden'); wrapFollowUp.classList.remove('hidden'); hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
-        } else { wrapDelegasi.classList.add('hidden'); wrapFollowUp.classList.add('hidden'); document.getElementById('inputAssignee').value = "SELF"; document.getElementById('inputJadwalFollowUp').value = ""; hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)"; }
+        const j = document.getElementById('inputJenis').value;
+        const s = document.getElementById('statusInput').value; 
+        const hpInput = document.getElementById('inputNoHp'); 
+        const wrapFollowUp = document.getElementById('wrapFollowUp'); 
+        const wrapDelegasi = document.getElementById('wrapDelegasi');
+        const assigneeEl = document.getElementById('inputAssignee');
+
+        if(s === "PROSPEK") { 
+            wrapDelegasi.classList.remove('hidden'); 
+            wrapFollowUp.classList.remove('hidden'); 
+            hpInput.required = false; hpInput.placeholder = "NOMOR WHATSAPP (OPSIONAL)"; 
+            if(j === "CROSS SELLING") { assigneeEl.required = true; } else { assigneeEl.required = false; }
+        } else { 
+            wrapDelegasi.classList.add('hidden'); 
+            wrapFollowUp.classList.add('hidden'); 
+            assigneeEl.value = "SELF"; 
+            assigneeEl.required = false;
+            document.getElementById('inputJadwalFollowUp').value = ""; 
+            hpInput.required = true; hpInput.placeholder = "NOMOR WHATSAPP (WAJIB)"; 
+        }
     }
 
     function cekUpdateStatus() {
@@ -440,16 +492,13 @@
         cekUpdateStatus(); document.getElementById('modalUpdate').classList.remove('hidden');
     }
 
-    // DINAMISASI FILTER STRATEGI
+    // DINAMISASI FILTER STRATEGI (HANYA UPSELL & CROSS SELL SEKARANG)
     function openKpiDetail(type) {
         let title = ""; let rawList = [];
         
         if (type === 'TOTAL') { title = "TOTAL NASABAH KELOLAAN RELEVAN"; rawList = printData.history; } 
         else if (type === 'LOST') { title = "DETAIL LOST LEADS"; rawList = printData.history.filter(h => h.statusAkhir === 'DITOLAK'); }
-        else {
-            title = "DETAIL STRATEGI: " + type;
-            rawList = printData.history.filter(h => h.logs.some(log => log.jenis === type));
-        }
+        else { title = "DETAIL STRATEGI: " + type; rawList = printData.history.filter(h => h.logs.some(log => log.jenis === type)); }
 
         let grouped = {}; rawList.forEach(h => { if(!grouped[h.nasabah]) grouped[h.nasabah] = []; grouped[h.nasabah].push(h); });
         let html = "";
@@ -491,9 +540,9 @@
         document.getElementById('statStaffName').innerText = staff.nama; document.getElementById('statStaffPeriode').innerText = "TARGET " + staff.periode.toUpperCase() + ": " + staff.target;
         document.getElementById('statDeals').innerText = staff.closing; document.getElementById('statProspek').innerText = staff.prospek; document.getElementById('statLostDetail').innerText = staff.ditolak;
 
-        let totalJenis = staff.jenisMap['CROSS SELLING'] + staff.jenisMap['UPSELLING'] + staff.jenisMap['AKUISISI BARU']; let htmlJenis = "";
+        let totalJenis = staff.jenisMap['CROSS SELLING'] + staff.jenisMap['UPSELLING']; let htmlJenis = "";
         if(totalJenis === 0) { htmlJenis = "<p class='text-[10px] text-slate-400 italic text-center'>BELUM ADA DATA STRATEGI.</p>"; } 
-        else { let pCS = Math.round((staff.jenisMap['CROSS SELLING']/totalJenis)*100) || 0; let pUP = Math.round((staff.jenisMap['UPSELLING']/totalJenis)*100) || 0; let pAK = Math.round((staff.jenisMap['AKUISISI BARU']/totalJenis)*100) || 0; htmlJenis = '<div class="flex h-4 rounded-full overflow-hidden text-[8px] text-white font-bold text-center">' + (pCS > 0 ? '<div style="width:'+pCS+'%" class="bg-indigo-500 flex items-center justify-center">CS</div>' : '') + (pUP > 0 ? '<div style="width:'+pUP+'%" class="bg-bpd-blue flex items-center justify-center">UP</div>' : '') + (pAK > 0 ? '<div style="width:'+pAK+'%" class="bg-bpd-orange flex items-center justify-center">AK</div>' : '') + '</div><div class="flex justify-between mt-1 text-[8px] text-slate-500 font-bold"><span>CS: '+pCS+'%</span><span>UP: '+pUP+'%</span><span>AK: '+pAK+'%</span></div>'; }
+        else { let pCS = Math.round((staff.jenisMap['CROSS SELLING']/totalJenis)*100) || 0; let pUP = Math.round((staff.jenisMap['UPSELLING']/totalJenis)*100) || 0; htmlJenis = '<div class="flex h-4 rounded-full overflow-hidden text-[8px] text-white font-bold text-center">' + (pCS > 0 ? '<div style="width:'+pCS+'%" class="bg-indigo-500 flex items-center justify-center">CS</div>' : '') + (pUP > 0 ? '<div style="width:'+pUP+'%" class="bg-bpd-blue flex items-center justify-center">UP</div>' : '') + '</div><div class="flex justify-between mt-1 text-[8px] text-slate-500 font-bold"><span>CS: '+pCS+'%</span><span>UP: '+pUP+'%</span></div>'; }
         document.getElementById('statStaffStrategi').innerHTML = htmlJenis;
 
         let htmlProd = "";
@@ -521,16 +570,13 @@
         const s = data.stats;
         document.getElementById('kpiClosing').innerText = s.closing; document.getElementById('kpiTarget').innerText = s.target; document.getElementById('kpiPeriode').innerText = s.periodeTarget; 
         
-        // Dynamic KPI Strategy Card Calculation Based on Visibility
-        let countCS = 0, countUP = 0, countAK = 0;
+        let countCS = 0, countUP = 0;
         data.history.forEach(h => {
             if(h.logs.some(l => l.jenis === 'CROSS SELLING')) countCS++;
             if(h.logs.some(l => l.jenis === 'UPSELLING')) countUP++;
-            if(h.logs.some(l => l.jenis === 'AKUISISI BARU')) countAK++;
         });
         document.getElementById('kpiCS').innerText = countCS;
         document.getElementById('kpiUP').innerText = countUP;
-        document.getElementById('kpiAK').innerText = countAK;
 
         let totalUniqueNasabah = Object.keys(data.history.reduce((acc, obj) => { acc[obj.nasabah] = true; return acc; }, {})).length;
         document.getElementById('statTotal').innerText = totalUniqueNasabah; document.getElementById('statLost').innerText = s.ditolak;
@@ -573,8 +619,7 @@
                if(staff.badges && staff.badges.length > 0) { staff.badges.forEach(b => { badgeHtml += '<span class="text-[8px] ' + b.class + ' px-1.5 py-0.5 rounded font-bold mr-1"><i class="fa-solid ' + b.icon + '"></i> ' + b.text + '</span>'; }); }
                let rankBadge = rank === 1 ? 'bg-amber-100 text-bpd-orange' : (rank === 2 ? 'bg-slate-200 text-slate-600' : 'bg-orange-100 text-orange-600'); if(rank > 3) rankBadge = 'bg-slate-50 text-slate-400';
                
-               // PERBAIKAN LEADERBOARD: Menampilkan Rincian Strategi Staf
-               ldbHtml += '<div class="bg-white p-4 rounded-3xl card-shadow flex items-center cursor-pointer hover:border-bpd-blue border border-transparent transition-all animate-slide-up" onclick="openStaffStats(\'' + staff.id + '\')"><div class="' + rankBadge + ' w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-sm shrink-0 mr-3">#' + rank + '</div><div class="flex-1"><p class="text-xs font-black text-slate-800 uppercase mb-0.5">' + staff.nama + '</p><div class="mb-1.5">' + badgeHtml + '</div><div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div class="bg-bpd-blue h-1.5 rounded-full" style="width: ' + staffPercent + '%"></div></div><p class="text-[9px] font-extrabold text-slate-400 uppercase mt-1">' + staff.closing + ' DEALS / ' + staff.target + ' TARGET <span class="ml-2 text-indigo-400">CS:' + staff.jenisMap['CROSS SELLING'] + ' UP:' + staff.jenisMap['UPSELLING'] + ' AK:' + staff.jenisMap['AKUISISI BARU'] + '</span></p></div><div class="ml-3 text-right"><p class="text-lg font-black text-emerald-500 leading-none">' + Math.round(staffPercent) + '%</p></div></div>'; rank++;
+               ldbHtml += '<div class="bg-white p-4 rounded-3xl card-shadow flex items-center cursor-pointer hover:border-bpd-blue border border-transparent transition-all animate-slide-up" onclick="openStaffStats(\'' + staff.id + '\')"><div class="' + rankBadge + ' w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-sm shrink-0 mr-3">#' + rank + '</div><div class="flex-1"><p class="text-xs font-black text-slate-800 uppercase mb-0.5">' + staff.nama + '</p><div class="mb-1.5">' + badgeHtml + '</div><div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div class="bg-bpd-blue h-1.5 rounded-full" style="width: ' + staffPercent + '%"></div></div><p class="text-[10px] font-black text-slate-500 uppercase mt-1">⭐ ' + staff.poin + ' POIN <span class="font-bold text-[9px] ml-1 text-slate-400">| ' + staff.closing + ' DEALS</span> <span class="ml-2 text-[9px] text-indigo-400 font-extrabold">CS:' + staff.jenisMap['CROSS SELLING'] + ' UP:' + staff.jenisMap['UPSELLING'] + '</span></p></div><div class="ml-3 text-right"><p class="text-lg font-black text-emerald-500 leading-none">' + Math.round(staffPercent) + '%</p></div></div>'; rank++;
             });
             c4.innerHTML = ldbHtml || '<p class="text-[10px] text-center">DATA KOSONG</p>';
         }
@@ -628,6 +673,14 @@
                 alert("BUKTI FOTO WAJIB DILAMPIRKAN UNTUK SEMUA METODE PENAWARAN."); 
                 isSubmittingAction = false; return; 
             } 
+
+            // VALIDASI STRICT (AUTO-ROUTE CROSS SELLING)
+            let rawAssignee = document.getElementById('inputAssignee').value;
+            let rawJenis = document.getElementById('inputJenis').value;
+            if (rawJenis === "CROSS SELLING" && (rawAssignee === "" || rawAssignee === "SELF")) {
+                alert("TUGAS CROSS SELLING WAJIB DIOPER KE REKAN TIM."); 
+                isSubmittingAction = false; return;
+            }
             
             btn.disabled = true; btn.classList.add('opacity-80'); btnText.innerText = "MENYIMPAN..."; spinner.classList.remove('hidden'); 
             const obj = Object.fromEntries(new FormData(this)); obj.lat = latitude; obj.lng = longitude; obj.device = navigator.userAgent; obj.activeId = activeUser.id; obj.activeNama = activeUser.nama; 
@@ -662,7 +715,6 @@
             callGAS("manageProductDb", { crudAction: document.getElementById('productFormAction').value, payload: payload }).then(res => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); initGateway(res.initData); closeProductForm(); renderManageProductUI(); isSubmittingAction = false; }).catch(err => { btn.disabled = false; txt.innerText = "SIMPAN DATA"; spin.classList.add('hidden'); isSubmittingAction = false; }); 
         });
 
-        // Paksa minta lokasi 1 detik setelah render awal dan pastikan blok foto terlihat
         setTimeout(requestLocationUpdate, 1000); 
         document.getElementById('wrapUpload').classList.remove('hidden');
 
