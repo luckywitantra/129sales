@@ -45,7 +45,19 @@
           <div class="w-14 h-14 bg-bpd-blue rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg"><i class="fa-solid fa-rocket"></i></div>
           <div><h3 class="font-black text-slate-800 text-lg">Install Super App</h3><p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Akses lebih cepat & mendukung mode offline.</p></div>
       </div>
-      <div class="flex space-x-3"><button onclick="document.getElementById('installPromptModal').classList.add('hidden')" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl text-sm uppercase">Nanti Saja</button><button id="btnInstallAppConfirm" class="flex-1 bg-bpd-blue text-white font-black py-3.5 rounded-xl text-sm shadow-lg uppercase">Install Sekarang</button></div>
+      <div class="flex space-x-3"><button onclick="document.getElementById('installPromptModal').classList.add('hidden')" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl text-sm uppercase">Nanti</button><button id="btnInstallAppConfirm" class="flex-1 bg-bpd-blue text-white font-black py-3.5 rounded-xl text-sm shadow-lg uppercase">Install Sekarang</button></div>
+  </div>
+
+  <div id="iosInstallModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[999] flex items-end justify-center p-4 animate-fade-in">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative mb-4">
+          <button onclick="document.getElementById('iosInstallModal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 bg-slate-100 rounded-full w-8 h-8 flex justify-center items-center hover:bg-slate-200"><i class="fa-solid fa-xmark"></i></button>
+          <div class="text-center mb-5"><div class="w-16 h-16 bg-bpd-blue rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg mb-3"><i class="fa-brands fa-apple"></i></div><h3 class="font-black text-slate-800 text-lg">Install di iPhone/iPad</h3><p class="text-[11px] font-bold text-slate-500 mt-1">Agar aplikasi dapat dibuka secara offline.</p></div>
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+              <p class="text-xs font-bold text-slate-700 mb-3 flex items-center"><span class="bg-bpd-blue text-white w-5 h-5 rounded-full flex justify-center items-center mr-2 text-[10px]">1</span> Tekan tombol Share <i class="fa-solid fa-arrow-up-from-bracket mx-2 text-blue-500 text-lg"></i> di menu bawah Safari.</p>
+              <p class="text-xs font-bold text-slate-700 flex items-center"><span class="bg-bpd-blue text-white w-5 h-5 rounded-full flex justify-center items-center mr-2 text-[10px]">2</span> Geser ke bawah & pilih <b>"Add to Home Screen"</b> <i class="fa-solid fa-square-plus mx-2 text-slate-400 text-lg"></i></p>
+          </div>
+          <button onclick="document.getElementById('iosInstallModal').classList.add('hidden')" class="w-full bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl text-sm uppercase">Mengerti</button>
+      </div>
   </div>
 
   <div id="view-gateway" class="fixed inset-0 bg-bpd-blue z-[200] flex flex-col items-center justify-center p-6 animate-fade-in no-print">
@@ -294,10 +306,25 @@
     let optDelegasiNoSelf = "";
     let deferredPrompt = null;
 
-    // INSTALL PWA PROMPT LOGIC
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault(); deferredPrompt = e;
-        setTimeout(() => { document.getElementById('installPromptModal').classList.remove('hidden'); }, 3000);
+    // DETEKSI INSTALASI PWA LINTAS PLATFORM
+    document.addEventListener('DOMContentLoaded', () => {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        
+        if (!isStandalone) {
+            const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+
+            if (isIos && isSafari) {
+                // Tampilkan popup instruksi iOS khusus
+                setTimeout(() => { document.getElementById('iosInstallModal').classList.remove('hidden'); }, 3000);
+            } else {
+                // Siapkan event untuk Android / PC (Chrome, Edge, dll)
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault(); deferredPrompt = e;
+                    setTimeout(() => { document.getElementById('installPromptModal').classList.remove('hidden'); }, 3000);
+                });
+            }
+        }
     });
     
     document.getElementById('btnInstallAppConfirm').addEventListener('click', async () => {
@@ -343,10 +370,7 @@
         }
     }
 
-    window.addEventListener('online', () => { 
-        document.getElementById('offlineAlert').classList.add('hidden'); 
-        syncOfflineData(); 
-    });
+    window.addEventListener('online', () => { document.getElementById('offlineAlert').classList.add('hidden'); syncOfflineData(); });
     window.addEventListener('offline', () => { document.getElementById('offlineAlert').classList.remove('hidden'); });
 
     async function callGAS(actionName, dataPayload = {}) {
@@ -354,13 +378,13 @@
           const mutasi = ["submitActivity", "updatePipelineStatus", "manageUserDb", "manageProductDb"];
           if(mutasi.includes(actionName)) {
               let q = JSON.parse(localStorage.getItem('crm_offline_queue') || '[]');
-              // Jika file terlalu besar untuk localstorage, hapus gambarnya sementara
+              // Cegah quota exceeded LocalStorage (hapus foto asli jika offline murni)
               if(dataPayload.fileData && dataPayload.fileData.length > 500000) dataPayload.fileData = "OFFLINE_CACHE"; 
               q.push({ action: actionName, data: dataPayload, time: Date.now() });
               localStorage.setItem('crm_offline_queue', JSON.stringify(q));
-              alert("Koneksi terputus. Data Anda telah diamankan secara offline dan akan dikirim otomatis saat koneksi kembali.");
-              return true; // Simulate success
-          } else { throw new Error("Anda sedang offline. Tidak dapat mengambil data dari server."); }
+              alert("Koneksi terputus. Data diamankan di memori lokal & akan dikirim otomatis saat internet kembali.");
+              return true; 
+          } else { throw new Error("Anda sedang offline. Tidak dapat memuat laporan terbaru."); }
       }
       try {
         const response = await fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: actionName, data: dataPayload }), headers: { "Content-Type": "text/plain;charset=utf-8" } });
@@ -414,7 +438,6 @@
       selRiwayat.innerHTML = optsRiwayat; document.getElementById('filterRiwayatStaff').value = "ALL"; document.getElementById('filterSearchNasabah').value = "";
       document.getElementById('view-gateway').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden');
       
-      // Auto sync jika ada sisa offline
       if(navigator.onLine) syncOfflineData();
       refreshDataServer();
     }
@@ -499,7 +522,6 @@
         } else { document.getElementById('nasabahExistingAlert').classList.add('hidden'); }
     }
 
-    // AUTOMATION: UPSELLING = BISA SEMUA STATUS + ASSIGNEE DIRI SENDIRI, CROSS SELLING = WAJIB PROSPEK + OPER REKAN
     function cekJenis() {
         const j = document.getElementById('inputJenis').value;
         const statusEl = document.getElementById('statusInput');
@@ -507,15 +529,10 @@
         
         if (j === 'UPSELLING') {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
-            statusEl.value = 'CLOSING'; 
-            assigneeEl.innerHTML = optDelegasiFull;
-            assigneeEl.value = 'SELF'; 
-            cekStatus(); 
+            statusEl.value = 'CLOSING'; assigneeEl.innerHTML = optDelegasiFull; assigneeEl.value = 'SELF'; cekStatus(); 
         } else if (j === 'CROSS SELLING') {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option>';
-            statusEl.value = 'PROSPEK';
-            assigneeEl.innerHTML = optDelegasiNoSelf; 
-            cekStatus();
+            statusEl.value = 'PROSPEK'; assigneeEl.innerHTML = optDelegasiNoSelf; cekStatus();
         } else {
             statusEl.innerHTML = '<option value="PROSPEK">🟡 PROSPEK</option><option value="CLOSING">🟢 CLOSING</option><option value="DITOLAK">🔴 DITOLAK</option>';
             assigneeEl.innerHTML = optDelegasiFull;
@@ -636,7 +653,7 @@
     function closeModalUpdate() { document.getElementById('modalUpdate').classList.add('hidden'); }
 
     function refreshDataServer() {
-      if(!navigator.onLine) return; // Jangan panggil kalau murni offline
+      if(!navigator.onLine) return; 
       let startD = document.getElementById('filterStart').value; let endD = document.getElementById('filterEnd').value;
       const c1 = document.getElementById('pipeContentAktif'); const c2 = document.getElementById('pipeContentTunggu');
       const c3 = document.getElementById('riwayatContainer'); const c4 = document.getElementById('leaderboardContainer');
