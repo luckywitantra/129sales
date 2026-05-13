@@ -1,20 +1,19 @@
 {
   "name": "CRM PRO Bankaltimtara",
   "short_name": "CRM PRO",
-  "description": "Super App Kolaborasi Perbankan",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#004A8D",
+  "background_color": "#F8FAFC",
   "theme_color": "#004A8D",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2933/2933116.png",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Bank_Kaltimtara_logo.svg/192px-Bank_Kaltimtara_logo.svg.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2933/2933116.png",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Bank_Kaltimtara_logo.svg/512px-Bank_Kaltimtara_logo.svg.png",
       "sizes": "512x512",
       "type": "image/png"
     }
